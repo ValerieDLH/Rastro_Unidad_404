@@ -117,11 +117,94 @@ export class Instrucciones extends Phaser.Scene {
         });
 
         this.crearControlVolumen();
+        this.iniciarRKInstrucciones();
 
         this.events.on('shutdown', this.limpiarEventosVolumen, this);
         this.events.on('destroy', this.limpiarEventosVolumen, this);
 
         this.cameras.main.fadeIn(400, 0, 0, 0);
+    }
+
+    update() {
+        this.actualizarRKInstrucciones();
+    }
+
+    iniciarRKInstrucciones() {
+        this.rkInstruccionesAnterior = {
+            l1: false,
+            r1: false
+        };
+    }
+
+    actualizarRKInstrucciones() {
+        if (this.yaTransicionando) return;
+
+        const pad = this.obtenerPadRKInstrucciones();
+        if (!pad) return;
+
+        const l1Presionado = this.botonRKInstrucciones(pad, 6);
+        const r1Presionado = this.botonRKInstrucciones(pad, 7);
+
+        const l1JustDown = l1Presionado && !this.rkInstruccionesAnterior.l1;
+        const r1JustDown = r1Presionado && !this.rkInstruccionesAnterior.r1;
+
+        if (l1JustDown) {
+            this.reproducirClick();
+
+            if (this.backBtn) {
+                this.tweens.killTweensOf(this.backBtn);
+                this.tweens.add({
+                    targets: this.backBtn,
+                    scale: 0.215,
+                    duration: 90,
+                    yoyo: true
+                });
+            }
+
+            this.irAEscenaHistoria();
+        }
+
+        if (r1JustDown) {
+            this.reproducirClick();
+
+            if (this.nextBtn) {
+                this.tweens.killTweensOf(this.nextBtn);
+                this.tweens.add({
+                    targets: this.nextBtn,
+                    scale: 0.58,
+                    duration: 90,
+                    yoyo: true
+                });
+            }
+
+            this.irAModoJuego();
+        }
+
+        this.rkInstruccionesAnterior.l1 = l1Presionado;
+        this.rkInstruccionesAnterior.r1 = r1Presionado;
+    }
+
+    obtenerPadRKInstrucciones() {
+        if (!this.input.gamepad) return null;
+
+        if (typeof this.input.gamepad.getPad === 'function') {
+            return this.input.gamepad.getPad(0);
+        }
+
+        if (this.input.gamepad.gamepads) {
+            return this.input.gamepad.gamepads[0] || null;
+        }
+
+        return null;
+    }
+
+    botonRKInstrucciones(pad, index) {
+        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+
+        const boton = pad.buttons[index];
+        const valor = typeof boton.value === 'number' ? boton.value : 0;
+
+        return boton.pressed === true || valor > 0.35;
     }
 
     _obtenerVolumenGlobal(volumenPorDefecto = 0.6) {

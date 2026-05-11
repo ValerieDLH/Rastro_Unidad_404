@@ -164,11 +164,18 @@ export class EscenaHistoria extends Phaser.Scene {
 
         this.crearControlVolumen();
 
+        this.iniciarRKHistoria();
+
         this.events.on('shutdown', this.limpiarEventosEscena, this);
         this.events.on('destroy', this.limpiarEventosEscena, this);
 
         this.mostrarTextoIntro();
     }
+
+    update() {
+        this.actualizarRKHistoria();
+    }
+
 
     _obtenerVolumenGlobal(volumenPorDefecto = 0.5) {
         let volumen = this.game.registry.get('volumenGlobal');
@@ -291,6 +298,78 @@ export class EscenaHistoria extends Phaser.Scene {
         } else {
             this.textoEsc3.setVisible(false);
         }
+    }
+
+    iniciarRKHistoria() {
+        this.rkHistoriaAnterior = {
+            l1: false,
+            r1: false
+        };
+
+        if (this.input.gamepad) {
+            this.input.gamepad.on('connected', (pad) => {
+                console.log('RK/Gamepad conectado en EscenaHistoria:', pad.index, pad.id);
+            });
+        }
+    }
+
+    actualizarRKHistoria() {
+        if (this.yaTransicionando) return;
+
+        const pad = this.obtenerPadRKHistoria();
+        if (!pad) return;
+
+        const l1Presionado = this.botonRKHistoria(pad, 6);
+        const r1Presionado = this.botonRKHistoria(pad, 7);
+
+        const l1JustDown = l1Presionado && !this.rkHistoriaAnterior.l1;
+        const r1JustDown = r1Presionado && !this.rkHistoriaAnterior.r1;
+
+        if (l1JustDown) {
+            this.reproducirClick();
+
+            if (this.backBtn) {
+                this.backBtn.setScale(0.215);
+            }
+
+            this.irAStart();
+        }
+
+        if (r1JustDown) {
+            this.reproducirClick();
+
+            if (this.skipBtn) {
+                this.skipBtn.setScale(0.195);
+            }
+
+            this.irAInstrucciones();
+        }
+
+        this.rkHistoriaAnterior.l1 = l1Presionado;
+        this.rkHistoriaAnterior.r1 = r1Presionado;
+    }
+
+    obtenerPadRKHistoria() {
+        if (!this.input.gamepad) return null;
+
+        if (typeof this.input.gamepad.getPad === 'function') {
+            return this.input.gamepad.getPad(0);
+        }
+
+        if (this.input.gamepad.gamepads) {
+            return this.input.gamepad.gamepads[0] || null;
+        }
+
+        return null;
+    }
+
+    botonRKHistoria(pad, index) {
+        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+
+        const boton = pad.buttons[index];
+        const valor = typeof boton.value === 'number' ? boton.value : 0;
+
+        return boton.pressed === true || valor > 0.35;
     }
 
     mostrarSecuencia() {

@@ -125,6 +125,8 @@ export class Start extends Phaser.Scene {
             Phaser.Input.Keyboard.KeyCodes.SPACE
         );
 
+        this.iniciarRKStart();
+
         this.events.on('shutdown', this.limpiarEventos, this);
         this.events.on('destroy', this.limpiarEventos, this);
     }
@@ -289,6 +291,147 @@ export class Start extends Phaser.Scene {
         this.spaceSound.play();
     }
 
+    iniciarRKStart() {
+        this.rkStartAnterior = {
+            seleccionar: false,
+            izquierda: false,
+            derecha: false
+        };
+
+        this.rkStartCooldownVolumen = 0;
+
+        this.rkFocoStart = this.add.rectangle(640, 680, 650, 52, 0x000000, 0);
+        this.rkFocoStart.setStrokeStyle(4, 0xffffff, 1);
+        this.rkFocoStart.setDepth(80);
+        this.rkFocoStart.setVisible(false);
+
+        if (this.input.gamepad) {
+            this.input.gamepad.on('connected', (pad) => {
+                console.log('RK/Gamepad conectado en Start:', pad.index, pad.id);
+            });
+        }
+    }
+
+    actualizarRKStart() {
+        if (this.yaInicioHistoria) return;
+
+        const pad = this.obtenerPadRKStart();
+
+        if (!pad) {
+            if (this.rkFocoStart) {
+                this.rkFocoStart.setVisible(false);
+            }
+            return;
+        }
+
+        if (this.rkFocoStart) {
+            this.rkFocoStart.setVisible(true);
+        }
+
+        const estado = this.leerEstadoRKStart(pad);
+
+        const seleccionarJustDown =
+            estado.seleccionar && !this.rkStartAnterior.seleccionar;
+
+        if (seleccionarJustDown) {
+            this.iniciarHistoria();
+        }
+
+        const ahora = performance.now();
+
+        if (ahora > this.rkStartCooldownVolumen) {
+            if (estado.izquierda) {
+                this.cambiarVolumenRKStart(-0.05);
+                this.rkStartCooldownVolumen = ahora + 140;
+            }
+
+            if (estado.derecha) {
+                this.cambiarVolumenRKStart(0.05);
+                this.rkStartCooldownVolumen = ahora + 140;
+            }
+        }
+
+        this.rkStartAnterior = {
+            seleccionar: estado.seleccionar,
+            izquierda: estado.izquierda,
+            derecha: estado.derecha
+        };
+    }
+
+    cambiarVolumenRKStart(cambio) {
+        const nuevoVolumen = Phaser.Math.Clamp(this.volumenActual + cambio, 0, 1);
+
+        this._guardarVolumenGlobal(nuevoVolumen);
+
+        if (this.introMusic) {
+            this.tweens.killTweensOf(this.introMusic);
+            this.introMusic.setVolume(this.volumenActual);
+        }
+
+        if (this.sliderFill && this.sliderGlow && this.sliderKnob) {
+            const izquierda = this.sliderX - this.sliderWidth / 2;
+
+            this.sliderFill.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
+            this.sliderGlow.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
+            this.sliderKnob.x = izquierda + this.sliderWidth * this.volumenActual;
+        }
+    }
+
+    obtenerPadRKStart() {
+        if (!this.input.gamepad) return null;
+
+        if (typeof this.input.gamepad.getPad === 'function') {
+            return this.input.gamepad.getPad(0);
+        }
+
+        if (this.input.gamepad.gamepads) {
+            return this.input.gamepad.gamepads[0] || null;
+        }
+
+        return null;
+    }
+
+    leerEstadoRKStart(pad) {
+        const ejeX = this.leerEjeRKStart(pad, 0);
+
+        return {
+            izquierda: ejeX < -0.45 || this.botonRKStart(pad, 14),
+            derecha: ejeX > 0.45 || this.botonRKStart(pad, 15),
+
+            // A normalmente es botón 0.
+            // R2 en tu RK Game quedó como botón 9.
+            seleccionar: this.botonRKStart(pad, 0) || this.botonRKStart(pad, 9)
+        };
+    }
+
+    leerEjeRKStart(pad, index) {
+        if (!pad || !pad.axes || !pad.axes[index]) return 0;
+
+        const eje = pad.axes[index];
+        let valor = 0;
+
+        if (typeof eje.getValue === 'function') {
+            valor = eje.getValue();
+        } else if (typeof eje.value === 'number') {
+            valor = eje.value;
+        } else if (typeof eje === 'number') {
+            valor = eje;
+        }
+
+        if (Math.abs(valor) < 0.25) return 0;
+
+        return valor;
+    }
+
+    botonRKStart(pad, index) {
+        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+
+        const boton = pad.buttons[index];
+        const valor = typeof boton.value === 'number' ? boton.value : 0;
+
+        return boton.pressed === true || valor > 0.35;
+    }
+
     iniciarHistoria() {
         if (this.yaInicioHistoria) return;
 
@@ -336,6 +479,8 @@ export class Start extends Phaser.Scene {
         if (Phaser.Input.Keyboard.JustDown(this.teclaSpace)) {
             this.iniciarHistoria();
         }
+
+        this.actualizarRKStart();
     }
 
     limpiarEventos() {
@@ -361,6 +506,11 @@ export class Start extends Phaser.Scene {
 
         if (this.spaceSound && this.spaceSound.isPlaying) {
             this.spaceSound.stop();
+        }
+
+        if (this.rkFocoStart) {
+            this.rkFocoStart.destroy();
+            this.rkFocoStart = null;
         }
     }
 }

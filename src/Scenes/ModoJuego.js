@@ -77,14 +77,26 @@ export class ModoJuego extends Phaser.Scene {
             this.sonidoContexto.play();
         }
 
+        this.keys = this.input.keyboard.addKeys({
+            X: Phaser.Input.Keyboard.KeyCodes.X,
+            B: Phaser.Input.Keyboard.KeyCodes.B
+        });
+
         this.crearBotonBack();
         this.crearBotonNext();
         this.crearAreasModo();
         this.crearIndicadorSeleccion();
         this.crearControlVolumen();
+        this.crearAvisoControlesRK();
+        this.iniciarRKModoJuego();
 
         this.events.on('shutdown', this.limpiarEventosVolumen, this);
         this.events.on('destroy', this.limpiarEventosVolumen, this);
+    }
+
+    update() {
+        this.actualizarTecladoModoJuego();
+        this.actualizarRKModoJuego();
     }
 
     _obtenerVolumenGlobal(volumenPorDefecto = 0.6) {
@@ -111,6 +123,128 @@ export class ModoJuego extends Phaser.Scene {
                 volume: 0.35
             });
         }
+    }
+
+    crearAvisoControlesRK() {
+        this.avisoControlesRK = this.add.text(
+            690,
+            180,
+            'X = 1 Player                  B = 2 Player',
+            {
+                fontFamily: '"VT323", monospace',
+                fontSize: '30px',
+                color: '#ffffff',
+                stroke: '#061225',
+                strokeThickness: 5,
+                align: 'center'
+            }
+        );
+
+        this.avisoControlesRK.setOrigin(0.5);
+        this.avisoControlesRK.setDepth(80);
+    }
+
+    iniciarRKModoJuego() {
+        this.rkModoAnterior = {
+            x: false,
+            b: false,
+            l1: false,
+            r1: false
+        };
+    }
+
+    actualizarTecladoModoJuego() {
+        if (this.yaTransicionando) return;
+
+        if (Phaser.Input.Keyboard.JustDown(this.keys.X)) {
+            this.reproducirClick();
+            this.seleccionarModo('1P');
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.keys.B)) {
+            this.reproducirClick();
+            this.seleccionarModo('2P');
+        }
+    }
+
+    actualizarRKModoJuego() {
+        if (this.yaTransicionando) return;
+
+        const pad = this.obtenerPadRKModoJuego();
+        if (!pad) return;
+
+        const xPresionado = this.botonXRK(pad);
+        const bPresionado = this.botonBRK(pad);
+        const l1Presionado = this.botonRKModoJuego(pad, 6);
+        const r1Presionado = this.botonRKModoJuego(pad, 7);
+
+        const xJustDown = xPresionado && !this.rkModoAnterior.x;
+        const bJustDown = bPresionado && !this.rkModoAnterior.b;
+        const l1JustDown = l1Presionado && !this.rkModoAnterior.l1;
+        const r1JustDown = r1Presionado && !this.rkModoAnterior.r1;
+
+        if (xJustDown) {
+            this.reproducirClick();
+            this.seleccionarModo('1P');
+        }
+
+        if (bJustDown) {
+            this.reproducirClick();
+            this.seleccionarModo('2P');
+        }
+
+        if (l1JustDown) {
+            this.reproducirClick();
+            this.irAInstrucciones();
+        }
+
+        if (r1JustDown) {
+            if (!this.modoSeleccionado) {
+                this.mostrarAvisoSeleccion();
+            } else {
+                this.reproducirClick();
+                this.irAlJuego();
+            }
+        }
+
+        this.rkModoAnterior.x = xPresionado;
+        this.rkModoAnterior.b = bPresionado;
+        this.rkModoAnterior.l1 = l1Presionado;
+        this.rkModoAnterior.r1 = r1Presionado;
+    }
+
+    obtenerPadRKModoJuego() {
+        if (!this.input.gamepad) return null;
+
+        if (typeof this.input.gamepad.getPad === 'function') {
+            return this.input.gamepad.getPad(0);
+        }
+
+        if (this.input.gamepad.gamepads) {
+            return this.input.gamepad.gamepads[0] || null;
+        }
+
+        return null;
+    }
+
+    botonRKModoJuego(pad, index) {
+        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+
+        const boton = pad.buttons[index];
+        const valor = typeof boton.value === 'number' ? boton.value : 0;
+
+        return boton.pressed === true || valor > 0.35;
+    }
+
+    botonXRK(pad) {
+        return (
+            this.botonRKModoJuego(pad, 2) ||
+            this.botonRKModoJuego(pad, 3)
+        );
+    }
+
+    botonBRK(pad) {
+        return this.botonRKModoJuego(pad, 1);
     }
 
     crearBotonBack() {
@@ -148,15 +282,7 @@ export class ModoJuego extends Phaser.Scene {
             if (this.yaTransicionando) return;
 
             this.reproducirClick();
-            this.yaTransicionando = true;
-
-            this.cameras.main.fadeOut(350, 0, 0, 0);
-
-            this.time.delayedCall(350, () => {
-                this.scene.start('Instrucciones', {
-                    volumenActual: this.volumenActual
-                });
-            });
+            this.irAInstrucciones();
         });
     }
 
@@ -368,7 +494,7 @@ export class ModoJuego extends Phaser.Scene {
 
         this.reproducirClick();
 
-        this.avisoSeleccion = this.add.text(690, 700, 'Selecciona primero 1 Player o 2 Player', {
+        this.avisoSeleccion = this.add.text(690, 700, 'Selecciona primero con X o B', {
             fontFamily: '"VT323", monospace',
             fontSize: '32px',
             color: '#fff2a8',
@@ -510,6 +636,26 @@ export class ModoJuego extends Phaser.Scene {
         if (this.pointerUpVolHandler) {
             this.input.off('pointerup', this.pointerUpVolHandler);
         }
+    }
+
+    irAInstrucciones() {
+        if (this.yaTransicionando) return;
+
+        this.yaTransicionando = true;
+
+        if (this.backZone) this.backZone.disableInteractive();
+        if (this.nextZone) this.nextZone.disableInteractive();
+        if (this.zona1Player) this.zona1Player.disableInteractive();
+        if (this.zona2Player) this.zona2Player.disableInteractive();
+        if (this.sliderZone) this.sliderZone.disableInteractive();
+
+        this.cameras.main.fadeOut(350, 0, 0, 0);
+
+        this.time.delayedCall(350, () => {
+            this.scene.start('Instrucciones', {
+                volumenActual: this.volumenActual
+            });
+        });
     }
 
     irAlJuego() {

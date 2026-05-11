@@ -245,29 +245,13 @@ export class CazaRumores extends Phaser.Scene {
 
         return presionado || valor > 0.35;
     }
-
     r2Presionado(pad) {
         if (!pad) return false;
 
-        const botonesPosibles = [7, 5, 6, 11];
-
-        for (let i = 0; i < botonesPosibles.length; i++) {
-            if (this.botonMandoPresionado(pad, botonesPosibles[i])) {
-                return true;
-            }
-        }
-
-        const ejesPosibles = [5, 2, 4, 3];
-
-        for (let i = 0; i < ejesPosibles.length; i++) {
-            const valor = this.leerEjeMandoSinDeadzone(pad, ejesPosibles[i]);
-
-            if (valor > 0.45) {
-                return true;
-            }
-        }
-
-        return false;
+        // Prueba nueva:
+        // Algunos mandos RK reportan R2 como botón 9.
+        // L2 no se incluye.
+        return this.botonMandoPresionado(pad, 9);
     }
 
     crearModoUnJugador() {
