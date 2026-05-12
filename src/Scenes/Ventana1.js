@@ -196,6 +196,8 @@ export class Ventana1 extends Phaser.Scene {
         this.actualizarEstadoDias();
         this.crearIndicadorVidas();
 
+        this.iniciarRKVentanaDirecto();
+
 
 
 
@@ -215,6 +217,10 @@ export class Ventana1 extends Phaser.Scene {
         if (this.transicionEntrada) {
             this.reproducirTransicionEntrada();
         }
+    }
+
+    update() {
+        this.actualizarRKVentanaDirecto();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -1212,6 +1218,11 @@ export class Ventana1 extends Phaser.Scene {
 
         this._cancelarCargaModalPendiente();
 
+        this.modalTipoActual = tipo;
+        this.rkConfirmarSanciones = null;
+        this.rkItemsModal = [];
+        this.rkIndiceModal = 0;
+
         this.modalAbierto = true;
         this.desactivarInteractivosPrincipales();
 
@@ -1422,31 +1433,48 @@ export class Ventana1 extends Phaser.Scene {
             }
         ).setOrigin(0.5, 0.5);
 
+        const actualizarVisualDecision = () => {
+            const nuevaDecision = this._obtenerDecisionDiaActual(pj);
+
+            btnDelBg.setFillStyle(nuevaDecision === 'delito' ? 0x5b9947 : 0x3f6e34, 1);
+            btnLibBg.setFillStyle(nuevaDecision === 'libre' ? 0x6b67bc : 0x474276, 1);
+
+            statusTxt.setText(
+                nuevaDecision === 'delito'
+                    ? 'Marcado como delito'
+                    : nuevaDecision === 'libre'
+                        ? 'Marcado como libre'
+                        : 'Sin clasificar'
+            );
+
+            statusTxt.setColor(nuevaDecision ? '#dfeaff' : '#a9badc');
+        };
+
         const zDel = this.add.zone(855, btnY, 130, 46).setInteractive({ cursor: 'pointer' });
         zDel.on('pointerover', () => btnDelBg.setFillStyle(0x6caf55, 1));
-        zDel.on('pointerout', () => btnDelBg.setFillStyle(decision === 'delito' ? 0x5b9947 : 0x3f6e34, 1));
+        zDel.on('pointerout', () => {
+            const decisionActual = this._obtenerDecisionDiaActual(pj);
+            btnDelBg.setFillStyle(decisionActual === 'delito' ? 0x5b9947 : 0x3f6e34, 1);
+        });
         zDel.on('pointerdown', () => {
             if (!this.modalAbierto || this.modalCerrando) return;
 
-            zDel.disableInteractive();
-            zLib.disableInteractive();
-
             this.reproducirClick();
             this._marcarComoDelito(pj);
-            this._recargarBuscadorSeguro();
+            actualizarVisualDecision();
         });
         const zLib = this.add.zone(1010, btnY, 130, 46).setInteractive({ cursor: 'pointer' });
         zLib.on('pointerover', () => btnLibBg.setFillStyle(0x7a76d1, 1));
-        zLib.on('pointerout', () => btnLibBg.setFillStyle(decision === 'libre' ? 0x6b67bc : 0x474276, 1));
+        zLib.on('pointerout', () => {
+            const decisionActual = this._obtenerDecisionDiaActual(pj);
+            btnLibBg.setFillStyle(decisionActual === 'libre' ? 0x6b67bc : 0x474276, 1);
+        });
         zLib.on('pointerdown', () => {
             if (!this.modalAbierto || this.modalCerrando) return;
 
-            zDel.disableInteractive();
-            zLib.disableInteractive();
-
             this.reproducirClick();
             this._marcarComoLibre(pj);
-            this._recargarBuscadorSeguro();
+            actualizarVisualDecision();
         });
 
         container.add([
@@ -1456,12 +1484,75 @@ export class Ventana1 extends Phaser.Scene {
             zDel, zLib
         ]);
 
+        const filaRK = this._rkFilaBuscador || 0;
+
+        this._registrarItemRKModal({
+            nombre: `DELITO ${pj.nombre}`,
+            x: 855,
+            y: btnY,
+            w: 130,
+            h: 46,
+            row: filaRK,
+            col: 0,
+            enScroll: true,
+            accion: () => {
+                if (!this.modalAbierto || this.modalCerrando) return;
+
+                this.reproducirClick();
+                this._marcarComoDelito(pj);
+                actualizarVisualDecision();
+                this.actualizarFocoRKModal();
+            }
+        });
+
+        this._registrarItemRKModal({
+            nombre: `LIBRE ${pj.nombre}`,
+            x: 1010,
+            y: btnY,
+            w: 130,
+            h: 46,
+            row: filaRK,
+            col: 1,
+            enScroll: true,
+            accion: () => {
+                if (!this.modalAbierto || this.modalCerrando) return;
+
+                this.reproducirClick();
+                this._marcarComoLibre(pj);
+                actualizarVisualDecision();
+                this.actualizarFocoRKModal();
+            }
+        });
+        this._registrarItemRKModal({
+            nombre: `LIBRE ${pj.nombre}`,
+            x: 1010,
+            y: btnY,
+            w: 130,
+            h: 46,
+            row: filaRK,
+            col: 1,
+            enScroll: true,
+            accion: () => {
+                if (!this.modalAbierto || this.modalCerrando) return;
+
+                this.reproducirClick();
+                this._marcarComoDelito(pj);
+                actualizarVisualDecision();
+                this.actualizarFocoRKModal();
+            }
+        });
+
         return topY + cardHeight + 18;
     }
     abrirModalDia(numeroDia) {
         if (this.modalAbierto || this.modalCerrando) return;
 
         this._cancelarCargaModalPendiente();
+
+        this.modalTipoActual = 'dia';
+        this.rkConfirmarSanciones = null;
+        this.rkItemsModal = [];
+        this.rkIndiceModal = 0;
 
         this.modalAbierto = true;
         this.desactivarInteractivosPrincipales();
@@ -1649,6 +1740,16 @@ export class Ventana1 extends Phaser.Scene {
 
         this.modalCerrando = true;
         this.modalAbierto = false;
+        this.modalTipoActual = null;
+        this.rkConfirmarSanciones = null;
+        this.rkItemsModal = [];
+        this.rkIndiceModal = 0;
+
+        if (this.rkFocoModal) {
+            this.rkFocoModal.setVisible(false);
+        }
+        this.modalTipoActual = null;
+        this.rkConfirmarSanciones = null;
 
         this._cancelarCargaModalPendiente();
         this._cerrarSelectorSancionesModal();
@@ -1890,6 +1991,544 @@ export class Ventana1 extends Phaser.Scene {
             ? sancion.consecuencia.split('.')[0]
             : 'Sanción correspondiente';
     }
+    iniciarRKVentanaDirecto() {
+        this.rkVentanaAnterior = {
+            l1: false,
+            r1: false,
+            x: false,
+            y: false,
+            b: false,
+            a: false,
+            arriba: false,
+            abajo: false,
+            izquierda: false,
+            derecha: false
+        };
+
+        this.rkItemsModal = [];
+        this.rkIndiceModal = 0;
+        this.rkSelectorItems = [];
+        this.rkSelectorIndice = 0;
+
+        this.rkFocoModal = this.add.rectangle(0, 0, 120, 60, 0x78a7ff, 0.10);
+        this.rkFocoModal.setStrokeStyle(3, 0xffffff, 0.9);
+        this.rkFocoModal.setDepth(260);
+        this.rkFocoModal.setVisible(false);
+    }
+
+    actualizarRKVentanaDirecto(time) {
+        if (this.yaTransicionando) return;
+
+        const pad = this.obtenerPadRKVentana();
+        if (!pad) {
+            if (this.rkFocoModal) this.rkFocoModal.setVisible(false);
+            return;
+        }
+
+        const estado = this.leerEstadoRKVentana(pad);
+
+        const l1JustDown = estado.l1 && !this.rkVentanaAnterior.l1;
+        const r1JustDown = estado.r1 && !this.rkVentanaAnterior.r1;
+        const xJustDown = estado.x && !this.rkVentanaAnterior.x;
+        const yJustDown = estado.y && !this.rkVentanaAnterior.y;
+        const bJustDown = estado.b && !this.rkVentanaAnterior.b;
+        const aJustDown = estado.a && !this.rkVentanaAnterior.a;
+
+        const arribaJustDown = estado.arriba && !this.rkVentanaAnterior.arriba;
+        const abajoJustDown = estado.abajo && !this.rkVentanaAnterior.abajo;
+        const izquierdaJustDown = estado.izquierda && !this.rkVentanaAnterior.izquierda;
+        const derechaJustDown = estado.derecha && !this.rkVentanaAnterior.derecha;
+
+        if (l1JustDown) {
+            this.accionRKBackVentana();
+        }
+
+        if (r1JustDown) {
+            this.accionRKConfirmarVentana();
+        }
+
+        if (this.modalAbierto) {
+            this.actualizarRKDentroDeModal({
+                aJustDown,
+                arribaJustDown,
+                abajoJustDown,
+                izquierdaJustDown,
+                derechaJustDown
+            });
+
+            this.rkVentanaAnterior = estado;
+            return;
+        }
+
+        if (xJustDown) {
+            this.accionRKBuscadorVentana();
+        }
+
+        if (yJustDown) {
+            this.accionRKDelitosEncontradosVentana();
+        }
+
+        if (bJustDown) {
+            this.accionRKManualVentana();
+        }
+
+        this.rkVentanaAnterior = estado;
+    }
+
+    actualizarRKDentroDeModal(input) {
+        if (this._sancionesModalElements && this._sancionesModalElements.length) {
+            this.actualizarRKSelectorSanciones(input);
+            return;
+        }
+
+        if (this.modalTipoActual === 'manual') {
+            this.actualizarRKScrollManual(input);
+            return;
+        }
+
+        if (!this.rkItemsModal || this.rkItemsModal.length === 0) {
+            this.actualizarRKScrollManual(input);
+            return;
+        }
+
+        if (input.arribaJustDown) {
+            this.moverRKModalVertical(-1);
+        }
+
+        if (input.abajoJustDown) {
+            this.moverRKModalVertical(1);
+        }
+
+        if (input.izquierdaJustDown) {
+            this.moverRKModalHorizontal(-1);
+        }
+
+        if (input.derechaJustDown) {
+            this.moverRKModalHorizontal(1);
+        }
+
+        if (input.aJustDown) {
+            const item = this.rkItemsModal[this.rkIndiceModal];
+
+            if (item && typeof item.accion === 'function') {
+                item.accion();
+            }
+        }
+
+        this.actualizarFocoRKModal();
+    }
+
+    actualizarRKScrollManual(input) {
+        if (!this.scrollState) return;
+
+        if (input.arribaJustDown) {
+            this._desplazarScroll(this.scrollState, -85);
+        }
+
+        if (input.abajoJustDown) {
+            this._desplazarScroll(this.scrollState, 85);
+        }
+
+        if (input.izquierdaJustDown) {
+            this._desplazarScroll(this.scrollState, -160);
+        }
+
+        if (input.derechaJustDown) {
+            this._desplazarScroll(this.scrollState, 160);
+        }
+
+        if (this.rkFocoModal) {
+            this.rkFocoModal.setVisible(false);
+        }
+    }
+
+    actualizarRKSelectorSanciones(input) {
+        if (!this.rkSelectorItems || this.rkSelectorItems.length === 0) return;
+
+        if (input.arribaJustDown || input.izquierdaJustDown) {
+            this.rkSelectorIndice = Phaser.Math.Wrap(
+                this.rkSelectorIndice - 1,
+                0,
+                this.rkSelectorItems.length
+            );
+            this.reproducirClick();
+        }
+
+        if (input.abajoJustDown || input.derechaJustDown) {
+            this.rkSelectorIndice = Phaser.Math.Wrap(
+                this.rkSelectorIndice + 1,
+                0,
+                this.rkSelectorItems.length
+            );
+            this.reproducirClick();
+        }
+
+        if (input.aJustDown) {
+            const item = this.rkSelectorItems[this.rkSelectorIndice];
+
+            if (item && typeof item.accion === 'function') {
+                item.accion();
+            }
+
+            return;
+        }
+
+        this.actualizarFocoRKSelector();
+    }
+
+    moverRKModalVertical(direccion) {
+        if (!this.rkItemsModal || this.rkItemsModal.length === 0) return;
+
+        const actual = this.rkItemsModal[this.rkIndiceModal];
+        if (!actual) return;
+
+        let candidatos = this.rkItemsModal.filter(item => {
+            if (direccion < 0) return item.row < actual.row;
+            return item.row > actual.row;
+        });
+
+        if (!candidatos.length) {
+            this.rkIndiceModal = direccion < 0 ? this.rkItemsModal.length - 1 : 0;
+            this.asegurarItemRKVisible(this.rkItemsModal[this.rkIndiceModal]);
+            this.reproducirClick();
+            this.actualizarFocoRKModal();
+            return;
+        }
+
+        candidatos.sort((a, b) => {
+            const distA = Math.abs(a.row - actual.row) * 1000 + Math.abs(a.col - actual.col);
+            const distB = Math.abs(b.row - actual.row) * 1000 + Math.abs(b.col - actual.col);
+            return distA - distB;
+        });
+
+        const elegido = candidatos[0];
+        this.rkIndiceModal = this.rkItemsModal.indexOf(elegido);
+
+        this.asegurarItemRKVisible(elegido);
+        this.reproducirClick();
+        this.actualizarFocoRKModal();
+    }
+
+    moverRKModalHorizontal(direccion) {
+        if (!this.rkItemsModal || this.rkItemsModal.length === 0) return;
+
+        const actual = this.rkItemsModal[this.rkIndiceModal];
+        if (!actual) return;
+
+        let candidatos = this.rkItemsModal.filter(item => {
+            if (item.row !== actual.row) return false;
+            if (direccion < 0) return item.col < actual.col;
+            return item.col > actual.col;
+        });
+
+        if (!candidatos.length) return;
+
+        candidatos.sort((a, b) => {
+            return Math.abs(a.col - actual.col) - Math.abs(b.col - actual.col);
+        });
+
+        const elegido = candidatos[0];
+        this.rkIndiceModal = this.rkItemsModal.indexOf(elegido);
+
+        this.asegurarItemRKVisible(elegido);
+        this.reproducirClick();
+        this.actualizarFocoRKModal();
+    }
+
+    actualizarFocoRKModal() {
+        if (!this.rkFocoModal) return;
+        if (!this.rkItemsModal || this.rkItemsModal.length === 0) {
+            this.rkFocoModal.setVisible(false);
+            return;
+        }
+
+        const item = this.rkItemsModal[this.rkIndiceModal];
+        if (!item) {
+            this.rkFocoModal.setVisible(false);
+            return;
+        }
+
+        let yPantalla = item.y;
+
+        if (item.enScroll && this.scrollState) {
+            yPantalla = item.y - this.scrollState.offset;
+        }
+
+        this.rkFocoModal.setVisible(true);
+        this.rkFocoModal.setDepth(260);
+        this.rkFocoModal.setPosition(item.x, yPantalla);
+        this.rkFocoModal.setDisplaySize(item.w + 18, item.h + 18);
+    }
+
+    actualizarFocoRKSelector() {
+        if (!this.rkFocoModal) return;
+        if (!this.rkSelectorItems || this.rkSelectorItems.length === 0) {
+            this.rkFocoModal.setVisible(false);
+            return;
+        }
+
+        const item = this.rkSelectorItems[this.rkSelectorIndice];
+        if (!item) {
+            this.rkFocoModal.setVisible(false);
+            return;
+        }
+
+        this.rkFocoModal.setVisible(true);
+        this.rkFocoModal.setDepth(260);
+        this.rkFocoModal.setPosition(item.x, item.y);
+        this.rkFocoModal.setDisplaySize(item.w + 18, item.h + 18);
+    }
+
+    asegurarItemRKVisible(item) {
+        if (!item || !item.enScroll || !this.scrollState) return;
+
+        const s = this.scrollState;
+        const margen = 22;
+
+        const itemTop = item.y - item.h / 2 - margen;
+        const itemBottom = item.y + item.h / 2 + margen;
+
+        const visibleTop = s.y + s.offset;
+        const visibleBottom = s.y + s.height + s.offset;
+
+        let nuevoOffset = s.offset;
+
+        if (itemTop < visibleTop) {
+            nuevoOffset = itemTop - s.y;
+        }
+
+        if (itemBottom > visibleBottom) {
+            nuevoOffset = itemBottom - s.y - s.height;
+        }
+
+        nuevoOffset = Phaser.Math.Clamp(nuevoOffset, 0, s.maxScroll);
+
+        s.offset = nuevoOffset;
+        s.container.y = -s.offset;
+        this._actualizarScrollVisual(s);
+    }
+
+    accionRKBackVentana() {
+        if (this._sancionesModalElements && this._sancionesModalElements.length) {
+            this.reproducirClick();
+            this._cerrarSelectorSancionesModal();
+            return;
+        }
+
+        if (this.modalAbierto) {
+            this.reproducirClick();
+            this.cerrarModal();
+            return;
+        }
+
+        this.reproducirClick();
+        this.irAStart();
+    }
+
+    accionRKConfirmarVentana() {
+        if (this._sancionesModalElements && this._sancionesModalElements.length) {
+            return;
+        }
+
+        if (this.modalAbierto) {
+            if (
+                this.modalTipoActual === 'encontrados' &&
+                this.rkConfirmarSanciones &&
+                Array.isArray(this.rkConfirmarSanciones.lista)
+            ) {
+                this.reproducirClick();
+                this._confirmarSanciones(
+                    this.rkConfirmarSanciones.lista,
+                    this.rkConfirmarSanciones.filtrarDia
+                );
+            }
+
+            return;
+        }
+
+        const resultado = this._validarDiaActualCompleto();
+
+        if (!resultado.todoCorrecto) {
+            this.reproducirClick();
+            this.registrarErrorDia();
+
+            if (this.vidasDiaActual > 0) {
+                this._mostrarResumenValidacionDia(resultado);
+            }
+
+            return;
+        }
+
+        this.reproducirClick();
+        this.finalizarDia();
+    }
+
+    accionRKBuscadorVentana() {
+        if (this.modalAbierto || this.modalCerrando) return;
+
+        this.reproducirClick();
+        this.abrirModalPrincipal('buscar');
+    }
+
+    accionRKDelitosEncontradosVentana() {
+        if (this.modalAbierto || this.modalCerrando) return;
+
+        this.reproducirClick();
+        this.abrirModalPrincipal('encontrados');
+    }
+
+    accionRKManualVentana() {
+        if (this.modalAbierto || this.modalCerrando) return;
+
+        this.reproducirClick();
+        this.abrirModalPrincipal('manual');
+    }
+
+    _registrarItemRKModal(config) {
+        if (!Array.isArray(this.rkItemsModal)) {
+            this.rkItemsModal = [];
+        }
+
+        this.rkItemsModal.push({
+            nombre: config.nombre || '',
+            x: config.x,
+            y: config.y,
+            w: config.w,
+            h: config.h,
+            row: typeof config.row === 'number' ? config.row : this.rkItemsModal.length,
+            col: typeof config.col === 'number' ? config.col : 0,
+            enScroll: config.enScroll === true,
+            accion: config.accion
+        });
+
+        this.rkIndiceModal = Phaser.Math.Clamp(
+            this.rkIndiceModal || 0,
+            0,
+            Math.max(0, this.rkItemsModal.length - 1)
+        );
+
+        this.actualizarFocoRKModal();
+    }
+
+    _registrarItemRKSelector(config) {
+        if (!Array.isArray(this.rkSelectorItems)) {
+            this.rkSelectorItems = [];
+        }
+
+        this.rkSelectorItems.push({
+            nombre: config.nombre || '',
+            x: config.x,
+            y: config.y,
+            w: config.w,
+            h: config.h,
+            accion: config.accion
+        });
+
+        this.rkSelectorIndice = Phaser.Math.Clamp(
+            this.rkSelectorIndice || 0,
+            0,
+            Math.max(0, this.rkSelectorItems.length - 1)
+        );
+
+        this.actualizarFocoRKSelector();
+    }
+
+    obtenerPadRKVentana() {
+        if (!this.input.gamepad) return null;
+
+        if (typeof this.input.gamepad.getPad === 'function') {
+            return this.input.gamepad.getPad(0);
+        }
+
+        if (this.input.gamepad.gamepads) {
+            return this.input.gamepad.gamepads[0] || null;
+        }
+
+        return null;
+    }
+
+    leerEstadoRKVentana(pad) {
+        const ejeX = this.leerEjeRKVentana(pad, 0);
+        const ejeY = this.leerEjeRKVentana(pad, 1);
+
+        return {
+            l1: this.botonRKVentana(pad, 6),
+            r1: this.botonRKVentana(pad, 7),
+
+            a: this.botonRKVentana(pad, 0),
+
+            x: this.botonXRKVentana(pad),
+            y: this.botonRKVentana(pad, 4),
+            b: this.botonRKVentana(pad, 1),
+
+            izquierda: ejeX < -0.45 || this.botonRKVentana(pad, 14),
+            derecha: ejeX > 0.45 || this.botonRKVentana(pad, 15),
+            arriba: ejeY < -0.45 || this.botonRKVentana(pad, 12),
+            abajo: ejeY > 0.45 || this.botonRKVentana(pad, 13)
+        };
+    }
+
+    leerEjeRKVentana(pad, index) {
+        if (!pad || !pad.axes || !pad.axes[index]) return 0;
+
+        const eje = pad.axes[index];
+        let valor = 0;
+
+        if (typeof eje.getValue === 'function') {
+            valor = eje.getValue();
+        } else if (typeof eje.value === 'number') {
+            valor = eje.value;
+        } else if (typeof eje === 'number') {
+            valor = eje;
+        }
+
+        if (Math.abs(valor) < 0.25) return 0;
+
+        return valor;
+    }
+
+    botonRKVentana(pad, index) {
+        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+
+        const boton = pad.buttons[index];
+        const valor = typeof boton.value === 'number' ? boton.value : 0;
+
+        return boton.pressed === true || valor > 0.35;
+    }
+
+    botonXRKVentana(pad) {
+        return (
+            this.botonRKVentana(pad, 2) ||
+            this.botonRKVentana(pad, 3)
+        );
+    }
+
+    restaurarFocoDespuesSelector() {
+        if (!Array.isArray(this.rkItemsModal) || this.rkItemsModal.length === 0) return;
+
+        const filaObjetivo = typeof this.rkFilaAntesSelector === 'number'
+            ? this.rkFilaAntesSelector
+            : 0;
+
+        let indice = this.rkItemsModal.findIndex(item => item.row === filaObjetivo);
+
+        if (indice < 0) {
+            indice = Phaser.Math.Clamp(
+                this.rkIndiceAntesSelector || 0,
+                0,
+                this.rkItemsModal.length - 1
+            );
+        }
+
+        this.rkIndiceModal = indice;
+
+        const item = this.rkItemsModal[this.rkIndiceModal];
+
+        if (item) {
+            this.asegurarItemRKVisible(item);
+            this.actualizarFocoRKModal();
+        }
+    }
 
     finalizarDia() {
         this.yaTransicionando = true;
@@ -2059,6 +2698,13 @@ export class Ventana1 extends Phaser.Scene {
     // Limpieza modal
     // ─────────────────────────────────────────────────────────
     limpiarContenidoModal() {
+        this.rkItemsModal = [];
+        this.rkIndiceModal = 0;
+
+        if (this.rkFocoModal) {
+            this.rkFocoModal.setVisible(false);
+        }
+
         this._destruirScrollState();
         this._cerrarSelectorSancionesModal();
 
@@ -2334,7 +2980,14 @@ export class Ventana1 extends Phaser.Scene {
                 if (el && el.destroy) el.destroy();
             });
         }
+
         this._sancionesModalElements = [];
+        this.rkSelectorItems = [];
+        this.rkSelectorIndice = 0;
+
+        if (this.rkFocoModal) {
+            this.rkFocoModal.setVisible(false);
+        }
     }
 
     _mostrarAvisoTemporal(texto, colorFondo = 0x173250, colorBorde = 0x4a7bd0) {
@@ -2394,7 +3047,8 @@ export class Ventana1 extends Phaser.Scene {
         this._crearAreaScrollable(110, 342, 980, 258);
 
         let currentY = 356;
-        personajes.forEach(pj => {
+        personajes.forEach((pj, index) => {
+            this._rkFilaBuscador = index;
             currentY = this._crearTarjetaBuscador(pj, currentY);
         });
 
@@ -2477,7 +3131,8 @@ export class Ventana1 extends Phaser.Scene {
         this._crearAreaScrollable(110, 356, 980, scrollHeight);
 
         let currentY = 370;
-        lista.forEach(pj => {
+        lista.forEach((pj, index) => {
+            this._rkFilaEncontrado = index;
             currentY = this._crearTarjetaEncontrado(pj, currentY, soloLectura);
         });
 
@@ -2485,6 +3140,11 @@ export class Ventana1 extends Phaser.Scene {
 
         // SOLO mostrar botón confirmar cuando sea la vista editable del día actual
         if (!soloLectura) {
+            this.rkConfirmarSanciones = {
+                lista,
+                filtrarDia
+            };
+
             const btnBg = this.add.rectangle(640, 612, 340, 56, 0x345593, 1);
             btnBg.setDepth(110).setStrokeStyle(2, 0xb5d0ff, 1);
             this.elementosContenidoModal.push(btnBg);
@@ -2510,6 +3170,8 @@ export class Ventana1 extends Phaser.Scene {
             this.elementosContenidoModal.push(btnZone);
         }
     }
+
+
     _crearTarjetaEncontrado(pj, topY, soloLectura = false) {
         const container = this.scrollState.container;
         const sancionAsignada = this._obtenerSancionAsignada(pj);
@@ -2613,10 +3275,34 @@ export class Ventana1 extends Phaser.Scene {
             zSelect.on('pointerout', () => {
                 selectBg.setFillStyle(0x203559, 1);
             });
-
             zSelect.on('pointerdown', () => {
                 this.reproducirClick();
+
+                this.rkFilaAntesSelector = this._rkFilaEncontrado || 0;
+                this.rkIndiceAntesSelector = this.rkIndiceModal || 0;
+
                 this._abrirSelectorSancionesModal(pj, this.diaActual);
+            });
+
+            const filaRK = this._rkFilaEncontrado || 0;
+
+            this._registrarItemRKModal({
+                nombre: `Asignar cargo ${pj.nombre}`,
+                x: panelX,
+                y: centerY + 12,
+                w: panelW,
+                h: panelH,
+                row: filaRK,
+                col: 0,
+                enScroll: true,
+                accion: () => {
+                    this.reproducirClick();
+
+                    this.rkFilaAntesSelector = filaRK;
+                    this.rkIndiceAntesSelector = this.rkIndiceModal || 0;
+
+                    this._abrirSelectorSancionesModal(pj, this.diaActual);
+                }
             });
 
             container.add([arrow, zSelect]);
@@ -2664,6 +3350,13 @@ export class Ventana1 extends Phaser.Scene {
 
         this._sancionesModalElements = [closeZone, shadow, bg, titleBar, title, subt];
 
+        this.rkSelectorItems = [];
+        this.rkSelectorIndice = 0;
+
+        if (this.rkFocoModal) {
+            this.rkFocoModal.setVisible(false);
+        }
+
         const startY = cy - panelHeight / 2 + 150;
         const btnW = 680;
         const btnH = 50;
@@ -2692,11 +3385,23 @@ export class Ventana1 extends Phaser.Scene {
                 optBg.setFillStyle(activa ? 0x4b6ea8 : 0x233e67, 1);
             });
 
-            optZone.on('pointerdown', () => {
+            const seleccionarSancion = () => {
                 this.reproducirClick();
                 this._asignarSancionTemporal(pj, sancion);
                 this._cerrarSelectorSancionesModal();
                 this.mostrarContenidoEncontrados(filtrarDia);
+                this.restaurarFocoDespuesSelector();
+            };
+
+            optZone.on('pointerdown', seleccionarSancion);
+
+            this._registrarItemRKSelector({
+                nombre: sancion.nombre,
+                x: cx,
+                y,
+                w: btnW,
+                h: btnH,
+                accion: seleccionarSancion
             });
 
             this._sancionesModalElements.push(optBg, optTxt, optZone);
@@ -2723,11 +3428,23 @@ export class Ventana1 extends Phaser.Scene {
             clearBg.setFillStyle(0x5d3d31, 1);
         });
 
-        clearZone.on('pointerdown', () => {
+        const quitarSancion = () => {
             this.reproducirClick();
             this._asignarSancionTemporal(pj, null);
             this._cerrarSelectorSancionesModal();
             this.mostrarContenidoEncontrados(filtrarDia);
+            this.restaurarFocoDespuesSelector();
+        };
+
+        clearZone.on('pointerdown', quitarSancion);
+
+        this._registrarItemRKSelector({
+            nombre: 'Quitar sanción',
+            x: cx,
+            y: clearY,
+            w: btnW,
+            h: 46,
+            accion: quitarSancion
         });
 
         const cancelY = clearY + 58;
@@ -2742,21 +3459,38 @@ export class Ventana1 extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(222);
 
         const cancelZone = this.add.zone(cx, cancelY, 260, 42).setDepth(223).setInteractive({ cursor: 'pointer' });
+
         cancelZone.on('pointerover', () => {
             cancelBg.setFillStyle(0x394c77, 1);
         });
+
         cancelZone.on('pointerout', () => {
             cancelBg.setFillStyle(0x2d3a5c, 1);
         });
-        cancelZone.on('pointerdown', () => {
+
+        const cancelarSelector = () => {
             this.reproducirClick();
             this._cerrarSelectorSancionesModal();
+            this.restaurarFocoDespuesSelector();
+        };
+
+        cancelZone.on('pointerdown', cancelarSelector);
+
+        this._registrarItemRKSelector({
+            nombre: 'Cancelar',
+            x: cx,
+            y: cancelY,
+            w: 260,
+            h: 42,
+            accion: cancelarSelector
         });
 
         this._sancionesModalElements.push(
             clearBg, clearTxt, clearZone,
             cancelBg, cancelTxt, cancelZone
         );
+
+        this.actualizarFocoRKSelector();
     }
 
     _confirmarSanciones(lista, filtrarDia) {
