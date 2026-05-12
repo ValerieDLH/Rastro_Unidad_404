@@ -18,7 +18,10 @@ export class AtrapaEvidencia extends Phaser.Scene {
         this.casos = Array.isArray(data.casos) ? data.casos.slice(0, 3) : [];
 
         this.objetivoIndex = 0;
-        this.etapaActual = 'nombre';
+        this.etapaActual = 'sancion';
+        this.notaFinalActiva = false;
+        this.aNotaAnterior = false;
+        this.continuarNotaFinal = null;
 
         this.letrasRecogidasCounts = {};
         this.objetosCayendo = [];
@@ -87,7 +90,10 @@ export class AtrapaEvidencia extends Phaser.Scene {
     }
 
     update(time, delta) {
-        if (this.juegoTerminado) return;
+        if (this.juegoTerminado) {
+            this.actualizarAceptarNotaFinalRK();
+            return;
+        }
 
         this.actualizarMovimientoCaja(delta);
         this.actualizarObjetosCayendo(delta);
@@ -399,8 +405,20 @@ export class AtrapaEvidencia extends Phaser.Scene {
         const caja = this.cajas[indice];
         if (!caja) return;
 
-        const minX = 100;
-        const maxX = 1180;
+        let minX = 100;
+        let maxX = 1180;
+
+        if (this.jugadores === 2) {
+            if (indice === 0) {
+                minX = 100;
+                maxX = 560;
+            }
+
+            if (indice === 1) {
+                minX = 720;
+                maxX = 1180;
+            }
+        }
 
         caja.x = Phaser.Math.Clamp(x, minX, maxX);
 
@@ -472,29 +490,21 @@ export class AtrapaEvidencia extends Phaser.Scene {
             );
         }
     }
-
     iniciarObjetivoActual() {
         if (this.objetivoIndex >= this.casos.length) {
             this.mostrarNotaFinal();
             return;
         }
 
+        this.etapaActual = 'sancion';
         this.letrasRecogidasCounts = {};
         this.limpiarObjetosCayendo();
 
         const caso = this.casos[this.objetivoIndex];
 
-        const modoTexto = this.etapaActual === 'nombre'
-            ? 'NOMBRE DEL SOSPECHOSO'
-            : 'SANCIÓN CORRESPONDIENTE';
-
-        const subtitulo = this.etapaActual === 'nombre'
-            ? `Sospechoso: ${caso.nombre}`
-            : `Sanción: ${caso.sancionCorta}`;
-
-        this.txtObjetivo.setText(`Objetivo ${this.objetivoIndex + 1}/3`);
-        this.txtModo.setText(`Modo: ${modoTexto}`);
-        this.txtSubtitulo.setText(subtitulo);
+        this.txtObjetivo.setText(`Objetivo ${this.objetivoIndex + 1}/${this.casos.length}`);
+        this.txtModo.setText('Modo: SANCIÓN CORRESPONDIENTE');
+        this.txtSubtitulo.setText(`Sanción: ${caso.sancionCorta}`);
 
         this.actualizarProgreso();
     }
@@ -502,14 +512,11 @@ export class AtrapaEvidencia extends Phaser.Scene {
     obtenerCasoActual() {
         return this.casos[this.objetivoIndex] || null;
     }
-
     obtenerTextoObjetivoActualOriginal() {
         const caso = this.obtenerCasoActual();
         if (!caso) return '';
 
-        return this.etapaActual === 'nombre'
-            ? caso.nombre
-            : caso.sancionCorta;
+        return caso.sancionCorta || '';
     }
 
     limpiarTexto(texto) {
@@ -598,30 +605,43 @@ export class AtrapaEvidencia extends Phaser.Scene {
             `Letras perdidas: ${this.letrasPerdidas}`
         );
     }
+    obtenerXLibre(intentos = 40) {
+        const distanciaMinimaX = 115;
+        const distanciaMinimaY = 135;
 
-    obtenerXLibre(intentos = 25) {
-        const minX = 90;
-        const maxX = 1190;
-        const distanciaMinima = 120;
+        let carriles;
 
-        for (let i = 0; i < intentos; i++) {
-            const x = Phaser.Math.Between(minX, maxX);
+        if (this.jugadores === 2) {
+            carriles = [
+                120, 210, 300, 390, 480, 555,
+                725, 815, 905, 995, 1085, 1170
+            ];
+        } else {
+            carriles = [
+                120, 220, 320, 420, 520, 620,
+                720, 820, 920, 1020, 1120, 1190
+            ];
+        }
 
-            const muyCerca = this.objetosCayendo.some(obj => {
+        Phaser.Utils.Array.Shuffle(carriles);
+
+        for (let i = 0; i < carriles.length; i++) {
+            const x = carriles[i];
+
+            const ocupado = this.objetosCayendo.some(obj => {
                 const distanciaX = Math.abs(obj.x - x);
                 const distanciaY = Math.abs(obj.y - (-40));
 
-                return distanciaX < distanciaMinima && distanciaY < 160;
+                return distanciaX < distanciaMinimaX && distanciaY < distanciaMinimaY;
             });
 
-            if (!muyCerca) {
+            if (!ocupado) {
                 return x;
             }
         }
 
-        return Phaser.Math.Between(minX, maxX);
+        return null;
     }
-
     generarObjeto() {
         if (this.juegoTerminado) return;
 
@@ -632,10 +652,16 @@ export class AtrapaEvidencia extends Phaser.Scene {
             this.crearLetraCorrecta(letra);
         }
 
-        const puedeCrearPiedra = this.objetosCayendo.filter(obj => obj.tipo === 'piedra').length < 3;
+        const piedrasEnPantalla = this.objetosCayendo.filter(obj => obj.tipo === 'piedra').length;
+        const letrasEnPantalla = this.objetosCayendo.filter(obj => obj.tipo === 'letra').length;
 
-        if (puedeCrearPiedra && Phaser.Math.Between(1, 100) <= 38) {
-            this.time.delayedCall(230, () => {
+        const puedeCrearPiedra =
+            piedrasEnPantalla < 2 &&
+            letrasEnPantalla < 5 &&
+            disponibles.length > 0;
+
+        if (puedeCrearPiedra && Phaser.Math.Between(1, 100) <= 24) {
+            this.time.delayedCall(260, () => {
                 if (!this.juegoTerminado) {
                     this.crearPiedra();
                 }
@@ -645,6 +671,11 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
     crearLetraCorrecta(letra) {
         const x = this.obtenerXLibre();
+
+        if (x === null) {
+            return;
+        }
+
         const y = -40;
 
         const circulo = this.add.circle(x, y, 30, 0x2fba68, 1);
@@ -664,7 +695,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
             valor: letra,
             x,
             y,
-            velocidad: Phaser.Math.Between(170, 225),
+            velocidad: Phaser.Math.Between(155, 205),
             shape: circulo,
             text: txt,
             radio: 30
@@ -673,14 +704,18 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
     crearPiedra() {
         const x = this.obtenerXLibre();
+
+        if (x === null) {
+            return;
+        }
+
         const y = -40;
 
-        const fondo = this.add.circle(x, y, 30, 0x6d6256, 1);
-        fondo.setStrokeStyle(4, 0xffffff, 1);
-        fondo.setDepth(30);
+        const hitboxInvisible = this.add.circle(x, y, 30, 0x000000, 0);
+        hitboxInvisible.setDepth(30);
 
         const txt = this.add.text(x, y, '🪨', {
-            fontSize: '34px'
+            fontSize: '42px'
         }).setOrigin(0.5).setDepth(31);
 
         this.objetosCayendo.push({
@@ -688,8 +723,8 @@ export class AtrapaEvidencia extends Phaser.Scene {
             valor: '🪨',
             x,
             y,
-            velocidad: Phaser.Math.Between(185, 240),
-            shape: fondo,
+            velocidad: Phaser.Math.Between(175, 220),
+            shape: hitboxInvisible,
             text: txt,
             radio: 30
         });
@@ -837,16 +872,9 @@ export class AtrapaEvidencia extends Phaser.Scene {
         this.cameras.main.shake(60, 0.002);
         this.actualizarProgreso();
     }
-
     avanzarEtapa() {
-        if (this.etapaActual === 'nombre') {
-            this.etapaActual = 'sancion';
-            this.iniciarObjetivoActual();
-            return;
-        }
-
         this.objetivoIndex += 1;
-        this.etapaActual = 'nombre';
+        this.etapaActual = 'sancion';
 
         if (this.objetivoIndex >= this.casos.length) {
             this.mostrarNotaFinal();
@@ -878,6 +906,8 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
     mostrarNotaFinal() {
         this.juegoTerminado = true;
+        this.notaFinalActiva = true;
+        this.aNotaAnterior = false;
 
         if (this.spawnTimer) {
             this.spawnTimer.remove(false);
@@ -970,19 +1000,16 @@ export class AtrapaEvidencia extends Phaser.Scene {
             strokeThickness: 4
         }).setOrigin(0.5).setDepth(105);
 
-        const zone = this.add.zone(640, 665, 320, 58);
-        zone.setInteractive({ cursor: 'pointer' });
-        zone.setDepth(106);
+        this.add.text(640, 704, 'Presiona A en RK Game o haz clic para continuar', {
+            fontFamily: '"VT323", monospace',
+            fontSize: '22px',
+            color: '#40291a'
+        }).setOrigin(0.5).setDepth(105);
 
-        zone.on('pointerover', () => {
-            btn.setFillStyle(0x4b9bff, 1);
-        });
+        const continuar = () => {
+            if (!this.notaFinalActiva) return;
 
-        zone.on('pointerout', () => {
-            btn.setFillStyle(0x2d82ff, 1);
-        });
-
-        zone.on('pointerdown', () => {
+            this.notaFinalActiva = false;
             this.reproducirClick();
 
             this.cameras.main.fadeOut(350, 0, 0, 0);
@@ -1000,7 +1027,81 @@ export class AtrapaEvidencia extends Phaser.Scene {
                     }
                 });
             });
+        };
+
+        this.continuarNotaFinal = continuar;
+
+        const zone = this.add.zone(640, 665, 320, 58);
+        zone.setInteractive({ cursor: 'pointer' });
+        zone.setDepth(106);
+
+        zone.on('pointerover', () => {
+            btn.setFillStyle(0x4b9bff, 1);
         });
+
+        zone.on('pointerout', () => {
+            btn.setFillStyle(0x2d82ff, 1);
+        });
+
+        zone.on('pointerdown', continuar);
+    }
+
+    botonAMandoPresionado(pad) {
+        return (
+            this.botonMandoPresionado(pad, 0) ||
+            this.botonMandoPresionado(pad, 5) ||
+            this.botonMandoPresionado(pad, 8)
+        );
+    }
+
+    actualizarAceptarNotaFinalRK() {
+        if (!this.notaFinalActiva || typeof this.continuarNotaFinal !== 'function') {
+            return;
+        }
+
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const aPresionado =
+            this.botonAMandoPresionado(pad1) ||
+            this.botonAMandoPresionado(pad2);
+
+        const aJustDown = aPresionado && !this.aNotaAnterior;
+
+        if (aJustDown) {
+            this.continuarNotaFinal();
+        }
+
+        this.aNotaAnterior = aPresionado;
+    }
+
+    botonAMandoPresionado(pad) {
+        return (
+            this.botonMandoPresionado(pad, 0) ||
+            this.botonMandoPresionado(pad, 5) ||
+            this.botonMandoPresionado(pad, 8)
+        );
+    }
+
+    actualizarAceptarNotaFinalRK() {
+        if (!this.notaFinalActiva || typeof this.continuarNotaFinal !== 'function') {
+            return;
+        }
+
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const aPresionado =
+            this.botonAMandoPresionado(pad1) ||
+            this.botonAMandoPresionado(pad2);
+
+        const aJustDown = aPresionado && !this.aNotaAnterior;
+
+        if (aJustDown) {
+            this.continuarNotaFinal();
+        }
+
+        this.aNotaAnterior = aPresionado;
     }
 
     reproducirClick(volumen = 0.35) {

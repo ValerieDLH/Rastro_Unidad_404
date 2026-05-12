@@ -1222,6 +1222,7 @@ export class Ventana1 extends Phaser.Scene {
         this.rkConfirmarSanciones = null;
         this.rkItemsModal = [];
         this.rkIndiceModal = 0;
+        this.rkOcultarFocoModal = false;
 
         this.modalAbierto = true;
         this.desactivarInteractivosPrincipales();
@@ -1483,7 +1484,6 @@ export class Ventana1 extends Phaser.Scene {
             statusTxt,
             zDel, zLib
         ]);
-
         const filaRK = this._rkFilaBuscador || 0;
 
         this._registrarItemRKModal({
@@ -1495,6 +1495,8 @@ export class Ventana1 extends Phaser.Scene {
             row: filaRK,
             col: 0,
             enScroll: true,
+            cardTop: topY,
+            cardBottom: topY + cardHeight,
             accion: () => {
                 if (!this.modalAbierto || this.modalCerrando) return;
 
@@ -1514,6 +1516,8 @@ export class Ventana1 extends Phaser.Scene {
             row: filaRK,
             col: 1,
             enScroll: true,
+            cardTop: topY,
+            cardBottom: topY + cardHeight,
             accion: () => {
                 if (!this.modalAbierto || this.modalCerrando) return;
 
@@ -1523,27 +1527,11 @@ export class Ventana1 extends Phaser.Scene {
                 this.actualizarFocoRKModal();
             }
         });
-        this._registrarItemRKModal({
-            nombre: `LIBRE ${pj.nombre}`,
-            x: 1010,
-            y: btnY,
-            w: 130,
-            h: 46,
-            row: filaRK,
-            col: 1,
-            enScroll: true,
-            accion: () => {
-                if (!this.modalAbierto || this.modalCerrando) return;
-
-                this.reproducirClick();
-                this._marcarComoDelito(pj);
-                actualizarVisualDecision();
-                this.actualizarFocoRKModal();
-            }
-        });
 
         return topY + cardHeight + 18;
     }
+
+
     abrirModalDia(numeroDia) {
         if (this.modalAbierto || this.modalCerrando) return;
 
@@ -1553,6 +1541,7 @@ export class Ventana1 extends Phaser.Scene {
         this.rkConfirmarSanciones = null;
         this.rkItemsModal = [];
         this.rkIndiceModal = 0;
+        this.rkOcultarFocoModal = false;
 
         this.modalAbierto = true;
         this.desactivarInteractivosPrincipales();
@@ -2009,6 +1998,7 @@ export class Ventana1 extends Phaser.Scene {
         this.rkIndiceModal = 0;
         this.rkSelectorItems = [];
         this.rkSelectorIndice = 0;
+        this.rkOcultarFocoModal = false;
 
         this.rkFocoModal = this.add.rectangle(0, 0, 120, 60, 0x78a7ff, 0.10);
         this.rkFocoModal.setStrokeStyle(3, 0xffffff, 0.9);
@@ -2045,6 +2035,9 @@ export class Ventana1 extends Phaser.Scene {
 
         if (r1JustDown) {
             this.accionRKConfirmarVentana();
+
+            this.rkVentanaAnterior = estado;
+            return;
         }
 
         if (this.modalAbierto) {
@@ -2053,7 +2046,12 @@ export class Ventana1 extends Phaser.Scene {
                 arribaJustDown,
                 abajoJustDown,
                 izquierdaJustDown,
-                derechaJustDown
+                derechaJustDown,
+
+                arriba: estado.arriba,
+                abajo: estado.abajo,
+                izquierda: estado.izquierda,
+                derecha: estado.derecha
             });
 
             this.rkVentanaAnterior = estado;
@@ -2064,11 +2062,11 @@ export class Ventana1 extends Phaser.Scene {
             this.accionRKBuscadorVentana();
         }
 
-        if (yJustDown) {
+        if (bJustDown) {
             this.accionRKDelitosEncontradosVentana();
         }
 
-        if (bJustDown) {
+        if (yJustDown) {
             this.accionRKManualVentana();
         }
 
@@ -2089,6 +2087,17 @@ export class Ventana1 extends Phaser.Scene {
         if (!this.rkItemsModal || this.rkItemsModal.length === 0) {
             this.actualizarRKScrollManual(input);
             return;
+        }
+
+        const huboMovimientoRK =
+            input.arribaJustDown ||
+            input.abajoJustDown ||
+            input.izquierdaJustDown ||
+            input.derechaJustDown ||
+            input.aJustDown;
+
+        if (huboMovimientoRK) {
+            this.rkOcultarFocoModal = false;
         }
 
         if (input.arribaJustDown) {
@@ -2121,20 +2130,34 @@ export class Ventana1 extends Phaser.Scene {
     actualizarRKScrollManual(input) {
         if (!this.scrollState) return;
 
-        if (input.arribaJustDown) {
-            this._desplazarScroll(this.scrollState, -85);
+        const ahora = performance.now();
+
+        if (!this.rkScrollManualCooldown) {
+            this.rkScrollManualCooldown = 0;
         }
 
-        if (input.abajoJustDown) {
-            this._desplazarScroll(this.scrollState, 85);
+        const puedeMover = ahora >= this.rkScrollManualCooldown;
+
+        if (!puedeMover) return;
+
+        if (input.arriba) {
+            this._desplazarScroll(this.scrollState, -28);
+            this.rkScrollManualCooldown = ahora + 35;
         }
 
-        if (input.izquierdaJustDown) {
-            this._desplazarScroll(this.scrollState, -160);
+        if (input.abajo) {
+            this._desplazarScroll(this.scrollState, 28);
+            this.rkScrollManualCooldown = ahora + 35;
         }
 
-        if (input.derechaJustDown) {
-            this._desplazarScroll(this.scrollState, 160);
+        if (input.izquierda) {
+            this._desplazarScroll(this.scrollState, -90);
+            this.rkScrollManualCooldown = ahora + 55;
+        }
+
+        if (input.derecha) {
+            this._desplazarScroll(this.scrollState, 90);
+            this.rkScrollManualCooldown = ahora + 55;
         }
 
         if (this.rkFocoModal) {
@@ -2237,6 +2260,12 @@ export class Ventana1 extends Phaser.Scene {
 
     actualizarFocoRKModal() {
         if (!this.rkFocoModal) return;
+
+        if (this.rkOcultarFocoModal) {
+            this.rkFocoModal.setVisible(false);
+            return;
+        }
+
         if (!this.rkItemsModal || this.rkItemsModal.length === 0) {
             this.rkFocoModal.setVisible(false);
             return;
@@ -2279,34 +2308,6 @@ export class Ventana1 extends Phaser.Scene {
         this.rkFocoModal.setDisplaySize(item.w + 18, item.h + 18);
     }
 
-    asegurarItemRKVisible(item) {
-        if (!item || !item.enScroll || !this.scrollState) return;
-
-        const s = this.scrollState;
-        const margen = 22;
-
-        const itemTop = item.y - item.h / 2 - margen;
-        const itemBottom = item.y + item.h / 2 + margen;
-
-        const visibleTop = s.y + s.offset;
-        const visibleBottom = s.y + s.height + s.offset;
-
-        let nuevoOffset = s.offset;
-
-        if (itemTop < visibleTop) {
-            nuevoOffset = itemTop - s.y;
-        }
-
-        if (itemBottom > visibleBottom) {
-            nuevoOffset = itemBottom - s.y - s.height;
-        }
-
-        nuevoOffset = Phaser.Math.Clamp(nuevoOffset, 0, s.maxScroll);
-
-        s.offset = nuevoOffset;
-        s.container.y = -s.offset;
-        this._actualizarScrollVisual(s);
-    }
 
     accionRKBackVentana() {
         if (this._sancionesModalElements && this._sancionesModalElements.length) {
@@ -2337,10 +2338,23 @@ export class Ventana1 extends Phaser.Scene {
                 Array.isArray(this.rkConfirmarSanciones.lista)
             ) {
                 this.reproducirClick();
+
+                this.rkOcultarFocoModal = true;
+
+                if (this.rkFocoModal) {
+                    this.rkFocoModal.setVisible(false);
+                }
+
                 this._confirmarSanciones(
                     this.rkConfirmarSanciones.lista,
                     this.rkConfirmarSanciones.filtrarDia
                 );
+
+                this.rkOcultarFocoModal = true;
+
+                if (this.rkFocoModal) {
+                    this.rkFocoModal.setVisible(false);
+                }
             }
 
             return;
@@ -2389,15 +2403,28 @@ export class Ventana1 extends Phaser.Scene {
             this.rkItemsModal = [];
         }
 
+        const h = typeof config.h === 'number' ? config.h : 50;
+
         this.rkItemsModal.push({
             nombre: config.nombre || '',
             x: config.x,
             y: config.y,
             w: config.w,
-            h: config.h,
+            h: h,
             row: typeof config.row === 'number' ? config.row : this.rkItemsModal.length,
             col: typeof config.col === 'number' ? config.col : 0,
             enScroll: config.enScroll === true,
+
+            // sirve para que el RK haga scroll pensando en toda la tarjeta,
+            // no solamente en el botón DELITO/LIBRE o selector.
+            cardTop: typeof config.cardTop === 'number'
+                ? config.cardTop
+                : config.y - h / 2,
+
+            cardBottom: typeof config.cardBottom === 'number'
+                ? config.cardBottom
+                : config.y + h / 2,
+
             accion: config.accion
         });
 
@@ -2408,6 +2435,47 @@ export class Ventana1 extends Phaser.Scene {
         );
 
         this.actualizarFocoRKModal();
+    }
+    asegurarItemRKVisible(item) {
+        if (!item || !item.enScroll || !this.scrollState) return;
+
+        const s = this.scrollState;
+        const margen = 18;
+
+        const cardTop = typeof item.cardTop === 'number'
+            ? item.cardTop - margen
+            : item.y - item.h / 2 - margen;
+
+        const cardBottom = typeof item.cardBottom === 'number'
+            ? item.cardBottom + margen
+            : item.y + item.h / 2 + margen;
+
+        const cardHeight = cardBottom - cardTop;
+
+        const visibleTop = s.y + s.offset;
+        const visibleBottom = s.y + s.height + s.offset;
+
+        let nuevoOffset = s.offset;
+
+        if (this.modalTipoActual === 'encontrados' || this.modalTipoActual === 'dia') {
+            nuevoOffset = cardTop - s.y;
+        } else if (cardHeight <= s.height) {
+            if (cardTop < visibleTop) {
+                nuevoOffset = cardTop - s.y;
+            }
+
+            if (cardBottom > visibleBottom) {
+                nuevoOffset = cardBottom - s.y - s.height;
+            }
+        } else {
+            nuevoOffset = cardTop - s.y;
+        }
+
+        nuevoOffset = Phaser.Math.Clamp(nuevoOffset, 0, s.maxScroll);
+
+        s.offset = nuevoOffset;
+        s.container.y = -s.offset;
+        this._actualizarScrollVisual(s);
     }
 
     _registrarItemRKSelector(config) {
@@ -2454,8 +2522,7 @@ export class Ventana1 extends Phaser.Scene {
         return {
             l1: this.botonRKVentana(pad, 6),
             r1: this.botonRKVentana(pad, 7),
-
-            a: this.botonRKVentana(pad, 0),
+            a: this.botonARKVentana(pad),
 
             x: this.botonXRKVentana(pad),
             y: this.botonRKVentana(pad, 4),
@@ -2500,6 +2567,14 @@ export class Ventana1 extends Phaser.Scene {
         return (
             this.botonRKVentana(pad, 2) ||
             this.botonRKVentana(pad, 3)
+        );
+    }
+
+    botonARKVentana(pad) {
+        return (
+            this.botonRKVentana(pad, 0) ||
+            this.botonRKVentana(pad, 5) ||
+            this.botonRKVentana(pad, 8)
         );
     }
 
@@ -2700,6 +2775,7 @@ export class Ventana1 extends Phaser.Scene {
     limpiarContenidoModal() {
         this.rkItemsModal = [];
         this.rkIndiceModal = 0;
+
 
         if (this.rkFocoModal) {
             this.rkFocoModal.setVisible(false);
@@ -3127,7 +3203,7 @@ export class Ventana1 extends Phaser.Scene {
         sep.setDepth(108);
         this.elementosContenidoModal.push(sep);
 
-        const scrollHeight = soloLectura ? 250 : 220;
+        const scrollHeight = soloLectura ? 270 : 250;
         this._crearAreaScrollable(110, 356, 980, scrollHeight);
 
         let currentY = 370;
@@ -3138,37 +3214,6 @@ export class Ventana1 extends Phaser.Scene {
 
         this._finalizarAreaScrollable(currentY + 12, offsetAnterior);
 
-        // SOLO mostrar botón confirmar cuando sea la vista editable del día actual
-        if (!soloLectura) {
-            this.rkConfirmarSanciones = {
-                lista,
-                filtrarDia
-            };
-
-            const btnBg = this.add.rectangle(640, 612, 340, 56, 0x345593, 1);
-            btnBg.setDepth(110).setStrokeStyle(2, 0xb5d0ff, 1);
-            this.elementosContenidoModal.push(btnBg);
-
-            const btnTxt = this.add.text(640, 612, 'Confirmar sanciones', {
-                fontFamily: '"VT323", monospace',
-                fontSize: '26px',
-                color: '#eef5ff'
-            }).setOrigin(0.5).setDepth(111);
-            this.elementosContenidoModal.push(btnTxt);
-
-            const btnZone = this.add.zone(640, 612, 340, 56)
-                .setDepth(112)
-                .setInteractive({ cursor: 'pointer' });
-
-            btnZone.on('pointerover', () => btnBg.setFillStyle(0x4168b0, 1));
-            btnZone.on('pointerout', () => btnBg.setFillStyle(0x345593, 1));
-            btnZone.on('pointerdown', () => {
-                this.reproducirClick();
-                this._confirmarSanciones(lista, filtrarDia);
-            });
-
-            this.elementosContenidoModal.push(btnZone);
-        }
     }
 
 
@@ -3178,10 +3223,10 @@ export class Ventana1 extends Phaser.Scene {
 
         const textStyle = {
             fontFamily: '"VT323", monospace',
-            fontSize: '21px',
+            fontSize: '19px',
             color: '#dbe6ff',
-            wordWrap: { width: 390 },
-            lineSpacing: 5
+            wordWrap: { width: 520, useAdvancedWrap: true },
+            lineSpacing: 3
         };
 
         const medidor = this.add.text(-3000, -3000, pj.textoCaso, textStyle);
@@ -3231,9 +3276,9 @@ export class Ventana1 extends Phaser.Scene {
         const casoTxt = this.add.text(210, topY + 54, pj.textoCaso, textStyle);
         container.add([nomTxt, casoTxt]);
 
-        const panelX = 850;
-        const panelW = 250;
-        const panelH = 66;
+        const panelX = 920;
+        const panelW = 220;
+        const panelH = 62;
 
         const labelTxt = this.add.text(panelX, topY + 18, soloLectura ? 'Cargo asignado' : 'Asignar cargo', {
             fontFamily: '"VT323", monospace',
@@ -3253,13 +3298,13 @@ export class Ventana1 extends Phaser.Scene {
             fontSize: cargoNombre.length > 24 ? '18px' : '22px',
             color: cargoNombre === 'Pendiente' ? '#ffb2ba' : '#fff0f0',
             align: 'center',
-            wordWrap: { width: 182 }
+            wordWrap: { width: 165, useAdvancedWrap: true }
         }).setOrigin(0.5);
 
         container.add([selectBg, selectTxt]);
 
         if (!soloLectura) {
-            const arrow = this.add.text(panelX + 104, centerY + 12, '▾', {
+            const arrow = this.add.text(panelX + 92, centerY + 12, '▾', {
                 fontFamily: '"VT323", monospace',
                 fontSize: '20px',
                 color: '#eef5ff'
@@ -3295,7 +3340,11 @@ export class Ventana1 extends Phaser.Scene {
                 row: filaRK,
                 col: 0,
                 enScroll: true,
+                cardTop: topY,
+                cardBottom: topY + cardHeight,
                 accion: () => {
+                    if (!this.modalAbierto || this.modalCerrando) return;
+
                     this.reproducirClick();
 
                     this.rkFilaAntesSelector = filaRK;
@@ -3531,6 +3580,10 @@ export class Ventana1 extends Phaser.Scene {
             0x173250,
             0x4a7bd0
         );
+
+        if (this.rkFocoModal) {
+            this.rkFocoModal.setVisible(false);
+        }
 
         if (this.cerrarModalZone && this.modalAbierto) {
             this.cerrarModalZone.setInteractive({ cursor: 'pointer' });

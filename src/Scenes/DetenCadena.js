@@ -20,6 +20,10 @@ export class DetenCadena extends Phaser.Scene {
         this.yaTermino = false;
         this.finalizando = false;
 
+        this.informeFinalActivo = false;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
+
         this.acciones = [
             { id: 'bloquear', texto: 'BLOQUEAR' },
             { id: 'reportar', texto: 'REPORTAR' },
@@ -59,9 +63,11 @@ export class DetenCadena extends Phaser.Scene {
         this.iniciarMusicaMinijuego();
         this.crearBarraVolumenMinijuego();
     }
-
     update() {
-        if (this.yaTermino) return;
+        if (this.yaTermino) {
+            this.actualizarAceptarInformeFinalRK();
+            return;
+        }
 
         if (this.jugadores === 2) {
             this.actualizarControlesJugador1();
@@ -225,6 +231,34 @@ export class DetenCadena extends Phaser.Scene {
         }
 
         return false;
+    }
+    botonAMandoPresionado(pad) {
+        return (
+            this.botonMandoPresionado(pad, 0) ||
+            this.botonMandoPresionado(pad, 5) ||
+            this.botonMandoPresionado(pad, 8)
+        );
+    }
+
+    actualizarAceptarInformeFinalRK() {
+        if (!this.informeFinalActivo || typeof this.continuarInformeFinal !== 'function') {
+            return;
+        }
+
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const aPresionado =
+            this.botonAMandoPresionado(pad1) ||
+            this.botonAMandoPresionado(pad2);
+
+        const aJustDown = aPresionado && !this.aInformeAnterior;
+
+        if (aJustDown) {
+            this.continuarInformeFinal();
+        }
+
+        this.aInformeAnterior = aPresionado;
     }
 
     procesarMandoJugador(jugador, numeroMando) {
@@ -776,6 +810,9 @@ export class DetenCadena extends Phaser.Scene {
         if (this.yaTermino) return;
 
         this.yaTermino = true;
+        this.informeFinalActivo = true;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
 
         const bonus = this.calcularBonusTotal();
         const puntajeBase = this.puntajeDia || {};
@@ -880,7 +917,10 @@ export class DetenCadena extends Phaser.Scene {
             btn.setFillStyle(0x2d82ff, 1);
         });
 
-        zone.on('pointerdown', () => {
+        const continuar = () => {
+            if (!this.informeFinalActivo) return;
+
+            this.informeFinalActivo = false;
             this.reproducirClick();
 
             this.cameras.main.fadeOut(350, 0, 0, 0);
@@ -906,7 +946,11 @@ export class DetenCadena extends Phaser.Scene {
                     }
                 });
             });
-        });
+        };
+
+        this.continuarInformeFinal = continuar;
+
+        zone.on('pointerdown', continuar);
     }
 
     cargarAudioMinijuego() {
