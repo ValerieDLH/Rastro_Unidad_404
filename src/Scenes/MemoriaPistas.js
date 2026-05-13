@@ -20,6 +20,10 @@ export class MemoriaPistas extends Phaser.Scene {
         this.yaTermino = false;
         this.bloqueado = false;
 
+        this.informeFinalActivo = false;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
+
         this.cartas = [];
         this.cartasVolteadas = [];
         this.parejasEncontradas = 0;
@@ -83,7 +87,12 @@ export class MemoriaPistas extends Phaser.Scene {
     }
 
     update() {
-        if (this.yaTermino || this.bloqueado) return;
+        if (this.yaTermino) {
+            this.actualizarAceptarInformeFinalRK();
+            return;
+        }
+
+        if (this.bloqueado) return;
 
         if (this.jugadores === 2) {
             if (this.jugadorActual === 1) {
@@ -250,6 +259,35 @@ export class MemoriaPistas extends Phaser.Scene {
         const valor = typeof boton.value === 'number' ? boton.value : 0;
 
         return presionado || valor > 0.35;
+    }
+
+    botonAMandoPresionado(pad) {
+        return (
+            this.botonMandoPresionado(pad, 0) ||
+            this.botonMandoPresionado(pad, 5) ||
+            this.botonMandoPresionado(pad, 8)
+        );
+    }
+
+    actualizarAceptarInformeFinalRK() {
+        if (!this.informeFinalActivo || typeof this.continuarInformeFinal !== 'function') {
+            return;
+        }
+
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const aPresionado =
+            this.botonAMandoPresionado(pad1) ||
+            this.botonAMandoPresionado(pad2);
+
+        const aJustDown = aPresionado && !this.aInformeAnterior;
+
+        if (aJustDown) {
+            this.continuarInformeFinal();
+        }
+
+        this.aInformeAnterior = aPresionado;
     }
 
     procesarMandoMemoria(selector, numeroMando) {
@@ -883,6 +921,10 @@ export class MemoriaPistas extends Phaser.Scene {
         this.yaTermino = true;
         this.bloqueado = true;
 
+        this.informeFinalActivo = true;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
+
         const bonus = this.calcularBonusTotal();
         const puntajeBase = this.puntajeDia || {};
 
@@ -970,6 +1012,12 @@ export class MemoriaPistas extends Phaser.Scene {
             strokeThickness: 4
         }).setOrigin(0.5).setDepth(105);
 
+        this.add.text(640, 710, 'Presiona A en RK Game o haz clic para continuar', {
+            fontFamily: '"VT323", monospace',
+            fontSize: '21px',
+            color: '#40291a'
+        }).setOrigin(0.5).setDepth(105);
+
         const zone = this.add.zone(640, 675, 320, 52);
         zone.setInteractive({ cursor: 'pointer' });
         zone.setDepth(106);
@@ -982,7 +1030,10 @@ export class MemoriaPistas extends Phaser.Scene {
             btn.setFillStyle(0x2d82ff, 1);
         });
 
-        zone.on('pointerdown', () => {
+        const continuar = () => {
+            if (!this.informeFinalActivo) return;
+
+            this.informeFinalActivo = false;
             this.reproducirClick();
 
             this.cameras.main.fadeOut(350, 0, 0, 0);
@@ -1002,7 +1053,11 @@ export class MemoriaPistas extends Phaser.Scene {
                     }
                 });
             });
-        });
+        };
+
+        this.continuarInformeFinal = continuar;
+
+        zone.on('pointerdown', continuar);
     }
 
     cargarAudioMinijuego() {

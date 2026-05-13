@@ -20,6 +20,10 @@ export class CazaRumores extends Phaser.Scene {
         this.yaTermino = false;
         this.finalizando = false;
 
+        this.informeFinalActivo = false;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
+
         this.jugador1 = null;
         this.jugador2 = null;
 
@@ -55,7 +59,10 @@ export class CazaRumores extends Phaser.Scene {
     }
 
     update(time, delta) {
-        if (this.yaTermino) return;
+        if (this.yaTermino) {
+            this.actualizarAceptarInformeFinalRK();
+            return;
+        }
 
         if (this.jugadores === 2) {
             this.actualizarJugador(this.jugador1, delta);
@@ -245,12 +252,39 @@ export class CazaRumores extends Phaser.Scene {
 
         return presionado || valor > 0.35;
     }
+
+    botonAMandoPresionado(pad) {
+        return (
+            this.botonMandoPresionado(pad, 0) ||
+            this.botonMandoPresionado(pad, 5) ||
+            this.botonMandoPresionado(pad, 8)
+        );
+    }
+
+    actualizarAceptarInformeFinalRK() {
+        if (!this.informeFinalActivo || typeof this.continuarInformeFinal !== 'function') {
+            return;
+        }
+
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const aPresionado =
+            this.botonAMandoPresionado(pad1) ||
+            this.botonAMandoPresionado(pad2);
+
+        const aJustDown = aPresionado && !this.aInformeAnterior;
+
+        if (aJustDown) {
+            this.continuarInformeFinal();
+        }
+
+        this.aInformeAnterior = aPresionado;
+    }
+
     r2Presionado(pad) {
         if (!pad) return false;
 
-        // Prueba nueva:
-        // Algunos mandos RK reportan R2 como botón 9.
-        // L2 no se incluye.
         return this.botonMandoPresionado(pad, 9);
     }
 
@@ -330,7 +364,7 @@ export class CazaRumores extends Phaser.Scene {
             ayuda: config.ayuda,
             mensajes: config.mensajes,
 
-            velocidadMira: 520,
+            velocidadMira: 620,
             puntos: 0,
             aciertos: 0,
             errores: 0,
@@ -357,13 +391,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“Dicen que robó los exámenes. Reenvíalo.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: acusa a alguien sin pruebas.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“No lo reenvíes si no sabes si es verdad.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: evita difundir información dudosa.'
                 }
             },
@@ -371,13 +403,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“Pásalo rápido antes de que lo borren.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: presiona para compartir sin verificar.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“Mejor revisa la fuente antes de compartir.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: invita a verificar primero.'
                 }
             },
@@ -385,13 +415,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“Yo sé que fue esa persona, aunque no tenga pruebas.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: acusa sin tener pruebas.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“Si no hay pruebas, no acusemos a nadie.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: evita culpar injustamente.'
                 }
             },
@@ -399,13 +427,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“Miren esta captura editada. Igual pásenla.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: una captura dudosa no se debe difundir.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“Guardemos evidencia real y pidamos ayuda.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: propone actuar correctamente.'
                 }
             }
@@ -418,13 +444,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“Compartan el chisme para que todos se enteren.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: busca afectar la reputación.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“No difundas chismes, puede hacer daño.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: frena la difusión del rumor.'
                 }
             },
@@ -432,13 +456,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“No sé si es real, pero pásenlo igual.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: comparte algo no verificado.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“Si no es confiable, mejor no lo compartas.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: evita propagar información falsa.'
                 }
             },
@@ -446,13 +468,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“Me contaron que hizo algo grave. Reenvíalo.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: acusa sin comprobar.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“Antes de creerlo, pregunta y verifica.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: invita a confirmar la información.'
                 }
             },
@@ -460,13 +480,11 @@ export class CazaRumores extends Phaser.Scene {
                 malo: {
                     tipo: 'malo',
                     texto: '“Todos deberían saber lo mala persona que es.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era dañino: intenta dañar públicamente a alguien.'
                 },
                 bueno: {
                     tipo: 'bueno',
                     texto: '“Reportemos la publicación si está haciendo daño.”',
-                    etiqueta: 'MENSAJE NUEVO',
                     explicacion: 'Era seguro: propone reportar contenido dañino.'
                 }
             }
@@ -611,8 +629,8 @@ export class CazaRumores extends Phaser.Scene {
 
         const esDos = this.jugadores === 2;
 
-        const ancho = esDos ? 405 : 440;
-        const alto = esDos ? 114 : 132;
+        const ancho = esDos ? 150 : 170;
+        const alto = esDos ? 155 : 175;
 
         const posiciones = this.obtenerPosicionesPar(jugador, ancho, alto);
 
@@ -624,60 +642,85 @@ export class CazaRumores extends Phaser.Scene {
         this.actualizarHUDJugador(jugador);
     }
 
-    obtenerPosicionesPar(jugador, ancho, alto) {
-        const centroX = (jugador.minX + jugador.maxX) / 2;
-        const centroY = (jugador.minY + jugador.maxY) / 2;
+    obtenerLimitesMovimientoTarjetas(jugador) {
+        return {
+            minX: jugador.minX,
+            maxX: jugador.maxX,
+            minY: Math.max(305, jugador.minY + 20),
+            maxY: Math.min(610, jugador.maxY + 20)
+        };
+    }
 
-        if (this.jugadores === 2) {
-            return [
-                {
-                    x: centroX,
-                    y: Phaser.Math.Clamp(jugador.minY + 105, jugador.minY + alto / 2, jugador.maxY - alto / 2)
-                },
-                {
-                    x: centroX,
-                    y: Phaser.Math.Clamp(jugador.maxY - 105, jugador.minY + alto / 2, jugador.maxY - alto / 2)
-                }
-            ];
+    tarjetasSolapan(a, b, margen = 28) {
+        const minDistX = (a.ancho + b.ancho) / 2 + margen;
+        const minDistY = (a.alto + b.alto) / 2 + margen;
+
+        return (
+            Math.abs(a.x - b.x) < minDistX &&
+            Math.abs(a.y - b.y) < minDistY
+        );
+    }
+
+    obtenerPosicionesPar(jugador, ancho, alto) {
+        const limites = this.obtenerLimitesMovimientoTarjetas(jugador);
+
+        const minX = Math.ceil(limites.minX + ancho / 2);
+        const maxX = Math.floor(limites.maxX - ancho / 2);
+        const minY = Math.ceil(limites.minY + alto / 2);
+        const maxY = Math.floor(limites.maxY - alto / 2);
+
+        const crearPosicion = () => {
+            return {
+                x: Phaser.Math.Between(minX, maxX),
+                y: Phaser.Math.Between(minY, maxY),
+                ancho,
+                alto
+            };
+        };
+
+        const primera = crearPosicion();
+        let segunda = crearPosicion();
+
+        for (let i = 0; i < 80; i++) {
+            segunda = crearPosicion();
+
+            if (!this.tarjetasSolapan(primera, segunda, 36)) {
+                return [
+                    { x: primera.x, y: primera.y },
+                    { x: segunda.x, y: segunda.y }
+                ];
+            }
         }
 
         return [
             {
-                x: Phaser.Math.Clamp(jugador.minX + 300, jugador.minX + ancho / 2, jugador.maxX - ancho / 2),
-                y: centroY
+                x: Phaser.Math.Clamp(limites.minX + ancho / 2 + 30, minX, maxX),
+                y: Phaser.Math.Clamp(limites.minY + alto / 2 + 30, minY, maxY)
             },
             {
-                x: Phaser.Math.Clamp(jugador.maxX - 300, jugador.minX + ancho / 2, jugador.maxX - ancho / 2),
-                y: centroY
+                x: Phaser.Math.Clamp(limites.maxX - ancho / 2 - 30, minX, maxX),
+                y: Phaser.Math.Clamp(limites.maxY - alto / 2 - 30, minY, maxY)
             }
         ];
     }
 
     crearTarjetaRumor(jugador, base, x, y, ancho, alto) {
         const esDos = this.jugadores === 2;
+        const limites = this.obtenerLimitesMovimientoTarjetas(jugador);
 
         const tarjeta = this.add.rectangle(x, y, ancho, alto, 0x8d2835, 0.96);
         tarjeta.setStrokeStyle(4, 0xffa0a0, 1);
         tarjeta.setDepth(25);
 
-        const etiqueta = this.add.text(x, y - alto / 2 + 20, base.etiqueta, {
+        const texto = this.add.text(x, y, base.texto, {
             fontFamily: '"VT323", monospace',
-            fontSize: esDos ? '16px' : '18px',
-            color: '#ffffff',
-            stroke: '#061225',
-            strokeThickness: 3,
-            align: 'center'
-        }).setOrigin(0.5).setDepth(26);
-
-        const texto = this.add.text(x, y + 13, base.texto, {
-            fontFamily: '"VT323", monospace',
-            fontSize: esDos ? '20px' : '24px',
+            fontSize: esDos ? '17px' : '19px',
             color: '#ffffff',
             stroke: '#061225',
             strokeThickness: 3,
             align: 'center',
-            wordWrap: { width: ancho - 34, useAdvancedWrap: true },
-            lineSpacing: 1
+            wordWrap: { width: ancho - 22, useAdvancedWrap: true },
+            lineSpacing: 0
         }).setOrigin(0.5).setDepth(26);
 
         const signoX = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
@@ -690,10 +733,16 @@ export class CazaRumores extends Phaser.Scene {
             y,
             ancho,
             alto,
-            vx: signoX * Phaser.Math.Between(esDos ? 65 : 80, esDos ? 95 : 120),
-            vy: signoY * Phaser.Math.Between(esDos ? 42 : 55, esDos ? 70 : 88),
+
+            minX: limites.minX,
+            maxX: limites.maxX,
+            minY: limites.minY,
+            maxY: limites.maxY,
+
+            vx: signoX * Phaser.Math.Between(esDos ? 90 : 105, esDos ? 125 : 155),
+            vy: signoY * Phaser.Math.Between(esDos ? 72 : 88, esDos ? 105 : 130),
+
             tarjeta,
-            etiqueta,
             texto,
             eliminado: false
         };
@@ -790,32 +839,81 @@ export class CazaRumores extends Phaser.Scene {
         if (!jugador || !Array.isArray(jugador.objetivosActuales)) return;
 
         const dt = delta / 1000;
+        const objetivos = jugador.objetivosActuales.filter(obj => obj && !obj.eliminado);
 
-        jugador.objetivosActuales.forEach(obj => {
-            if (!obj || obj.eliminado) return;
+        objetivos.forEach(obj => {
+            const minX = obj.minX ?? jugador.minX;
+            const maxX = obj.maxX ?? jugador.maxX;
+            const minY = obj.minY ?? jugador.minY;
+            const maxY = obj.maxY ?? jugador.maxY;
 
             obj.x += obj.vx * dt;
             obj.y += obj.vy * dt;
 
-            if (obj.x < jugador.minX + obj.ancho / 2 || obj.x > jugador.maxX - obj.ancho / 2) {
+            if (obj.x < minX + obj.ancho / 2 || obj.x > maxX - obj.ancho / 2) {
                 obj.vx *= -1;
             }
 
-            if (obj.y < jugador.minY + obj.alto / 2 || obj.y > jugador.maxY - obj.alto / 2) {
+            if (obj.y < minY + obj.alto / 2 || obj.y > maxY - obj.alto / 2) {
                 obj.vy *= -1;
             }
 
-            obj.x = Phaser.Math.Clamp(obj.x, jugador.minX + obj.ancho / 2, jugador.maxX - obj.ancho / 2);
-            obj.y = Phaser.Math.Clamp(obj.y, jugador.minY + obj.alto / 2, jugador.maxY - obj.alto / 2);
+            obj.x = Phaser.Math.Clamp(obj.x, minX + obj.ancho / 2, maxX - obj.ancho / 2);
+            obj.y = Phaser.Math.Clamp(obj.y, minY + obj.alto / 2, maxY - obj.alto / 2);
+        });
 
+        for (let rep = 0; rep < 2; rep++) {
+            for (let i = 0; i < objetivos.length; i++) {
+                for (let j = i + 1; j < objetivos.length; j++) {
+                    const a = objetivos[i];
+                    const b = objetivos[j];
+
+                    const minDistX = (a.ancho + b.ancho) / 2 + 24;
+                    const minDistY = (a.alto + b.alto) / 2 + 24;
+
+                    const dx = b.x - a.x;
+                    const dy = b.y - a.y;
+
+                    if (Math.abs(dx) < minDistX && Math.abs(dy) < minDistY) {
+                        const overlapX = minDistX - Math.abs(dx);
+                        const overlapY = minDistY - Math.abs(dy);
+
+                        if (overlapX < overlapY) {
+                            const signo = dx >= 0 ? 1 : -1;
+                            const empuje = overlapX / 2;
+
+                            a.x -= empuje * signo;
+                            b.x += empuje * signo;
+
+                            a.vx *= -1;
+                            b.vx *= -1;
+                        } else {
+                            const signo = dy >= 0 ? 1 : -1;
+                            const empuje = overlapY / 2;
+
+                            a.y -= empuje * signo;
+                            b.y += empuje * signo;
+
+                            a.vy *= -1;
+                            b.vy *= -1;
+                        }
+
+                        a.x = Phaser.Math.Clamp(a.x, a.minX + a.ancho / 2, a.maxX - a.ancho / 2);
+                        b.x = Phaser.Math.Clamp(b.x, b.minX + b.ancho / 2, b.maxX - b.ancho / 2);
+
+                        a.y = Phaser.Math.Clamp(a.y, a.minY + a.alto / 2, a.maxY - a.alto / 2);
+                        b.y = Phaser.Math.Clamp(b.y, b.minY + b.alto / 2, b.maxY - b.alto / 2);
+                    }
+                }
+            }
+        }
+
+        objetivos.forEach(obj => {
             obj.tarjeta.x = obj.x;
             obj.tarjeta.y = obj.y;
 
-            obj.etiqueta.x = obj.x;
-            obj.etiqueta.y = obj.y - obj.alto / 2 + 20;
-
             obj.texto.x = obj.x;
-            obj.texto.y = obj.y + 13;
+            obj.texto.y = obj.y;
         });
     }
 
@@ -903,7 +1001,6 @@ export class CazaRumores extends Phaser.Scene {
             this.tweens.killTweensOf(obj.tarjeta);
 
             if (obj.tarjeta) obj.tarjeta.destroy();
-            if (obj.etiqueta) obj.etiqueta.destroy();
             if (obj.texto) obj.texto.destroy();
 
             jugador.objetivoActual = null;
@@ -916,7 +1013,6 @@ export class CazaRumores extends Phaser.Scene {
                 this.tweens.killTweensOf(obj.tarjeta);
 
                 if (obj.tarjeta) obj.tarjeta.destroy();
-                if (obj.etiqueta) obj.etiqueta.destroy();
                 if (obj.texto) obj.texto.destroy();
             });
 
@@ -943,14 +1039,13 @@ export class CazaRumores extends Phaser.Scene {
         const originalX = obj.x;
 
         this.tweens.add({
-            targets: [obj.tarjeta, obj.etiqueta, obj.texto],
+            targets: [obj.tarjeta, obj.texto],
             x: originalX + 12,
             duration: 50,
             yoyo: true,
             repeat: 3,
             onComplete: () => {
                 if (obj.tarjeta) obj.tarjeta.x = obj.x;
-                if (obj.etiqueta) obj.etiqueta.x = obj.x;
                 if (obj.texto) obj.texto.x = obj.x;
             }
         });
@@ -1057,6 +1152,9 @@ export class CazaRumores extends Phaser.Scene {
         if (this.yaTermino) return;
 
         this.yaTermino = true;
+        this.informeFinalActivo = true;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
 
         this.limpiarJugador(this.jugador1);
         this.limpiarJugador(this.jugador2);
@@ -1152,6 +1250,12 @@ export class CazaRumores extends Phaser.Scene {
             strokeThickness: 4
         }).setOrigin(0.5).setDepth(105);
 
+        this.add.text(640, 710, 'Presiona A en RK Game o haz clic para continuar', {
+            fontFamily: '"VT323", monospace',
+            fontSize: '21px',
+            color: '#40291a'
+        }).setOrigin(0.5).setDepth(105);
+
         const zone = this.add.zone(640, 675, 320, 52);
         zone.setInteractive({ cursor: 'pointer' });
         zone.setDepth(106);
@@ -1164,7 +1268,10 @@ export class CazaRumores extends Phaser.Scene {
             btn.setFillStyle(0x2d82ff, 1);
         });
 
-        zone.on('pointerdown', () => {
+        const continuar = () => {
+            if (!this.informeFinalActivo) return;
+
+            this.informeFinalActivo = false;
             this.reproducirClick();
 
             this.cameras.main.fadeOut(350, 0, 0, 0);
@@ -1192,7 +1299,11 @@ export class CazaRumores extends Phaser.Scene {
                     }
                 });
             });
-        });
+        };
+
+        this.continuarInformeFinal = continuar;
+
+        zone.on('pointerdown', continuar);
     }
 
     cargarAudioMinijuego() {

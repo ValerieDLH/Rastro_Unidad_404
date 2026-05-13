@@ -18,7 +18,6 @@ export class EscenaHistoria extends Phaser.Scene {
         this.load.image('esc1', 'assets/esc1.png');
         this.load.image('esc2', 'assets/esc2.png');
         this.load.image('esc3', 'assets/esc3.png');
-        this.load.image('esc4', 'assets/esc4.png');
         this.load.image('esc5', 'assets/esc5.png');
         this.load.image('esc6', 'assets/esc6.png');
 
@@ -31,7 +30,7 @@ export class EscenaHistoria extends Phaser.Scene {
     }
 
     create() {
-        this.imagenes = ['esc1', 'esc2', 'esc3', 'esc4', 'esc5', 'esc6'];
+        this.imagenes = ['esc1', 'esc2', 'esc3', 'esc5', 'esc6'];
         this.indiceActual = 0;
 
         this.sonidoEscribir = null;
@@ -163,7 +162,6 @@ export class EscenaHistoria extends Phaser.Scene {
         });
 
         this.crearControlVolumen();
-
         this.iniciarRKHistoria();
 
         this.events.on('shutdown', this.limpiarEventosEscena, this);
@@ -175,7 +173,6 @@ export class EscenaHistoria extends Phaser.Scene {
     update() {
         this.actualizarRKHistoria();
     }
-
 
     _obtenerVolumenGlobal(volumenPorDefecto = 0.5) {
         let volumen = this.game.registry.get('volumenGlobal');
@@ -375,7 +372,9 @@ export class EscenaHistoria extends Phaser.Scene {
     mostrarSecuencia() {
         if (this.yaTransicionando) return;
 
-        if (this.indiceActual >= this.imagenes.length - 1) {
+        const siguienteIndice = this.indiceActual + 1;
+
+        if (siguienteIndice >= this.imagenes.length) {
             this.timerSecuencia = this.time.delayedCall(this.tiempoEntreEscenas, () => {
                 if (this.yaTransicionando) return;
 
@@ -389,6 +388,7 @@ export class EscenaHistoria extends Phaser.Scene {
                     }
                 });
             });
+
             return;
         }
 
@@ -402,16 +402,29 @@ export class EscenaHistoria extends Phaser.Scene {
                 onComplete: () => {
                     if (this.yaTransicionando) return;
 
-                    this.indiceActual++;
-                    this.imagenHistoria.setTexture(this.imagenes[this.indiceActual]);
+                    this.indiceActual = siguienteIndice;
+
+                    const nuevaImagen = this.imagenes[this.indiceActual];
+
+                    this.imagenHistoria.setTexture(nuevaImagen);
                     this.actualizarTextoEsc3();
 
                     if (this.indiceActual === 2) {
+                        this.textoEsc3.setVisible(true);
                         this.textoEsc3.setAlpha(1);
+                    } else {
+                        this.textoEsc3.setVisible(false);
+                        this.textoEsc3.setAlpha(0);
+                    }
+
+                    const elementosFadeIn = [this.imagenHistoria];
+
+                    if (this.indiceActual === 2) {
+                        elementosFadeIn.push(this.textoEsc3);
                     }
 
                     this.tweens.add({
-                        targets: [this.imagenHistoria, this.textoEsc3],
+                        targets: elementosFadeIn,
                         alpha: 1,
                         duration: this.duracionFadeEscenas,
                         onComplete: () => {
@@ -423,7 +436,6 @@ export class EscenaHistoria extends Phaser.Scene {
             });
         });
     }
-
     crearControlVolumen() {
         this.volumenActual = this._obtenerVolumenGlobal(this.volumenActual);
 
@@ -651,14 +663,20 @@ export class EscenaHistoria extends Phaser.Scene {
     limpiarEventosEscena() {
         if (this.pointerMoveVolHandler) {
             this.input.off('pointermove', this.pointerMoveVolHandler);
+            this.pointerMoveVolHandler = null;
         }
 
         if (this.pointerUpVolHandler) {
             this.input.off('pointerup', this.pointerUpVolHandler);
+            this.pointerUpVolHandler = null;
         }
 
         if (this.sonidoEscribir && this.sonidoEscribir.isPlaying) {
             this.sonidoEscribir.stop();
+        }
+
+        if (this.sonidoContexto && this.sonidoContexto.isPlaying) {
+            this.sonidoContexto.stop();
         }
     }
 }

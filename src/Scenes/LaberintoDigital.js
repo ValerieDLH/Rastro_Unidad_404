@@ -20,6 +20,10 @@ export class LaberintoDigital extends Phaser.Scene {
         this.yaTermino = false;
         this.encontrados = false;
 
+        this.informeFinalActivo = false;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
+
         this.tiempoTotal = 300;
         this.tiempoRestante = 300;
         this.timerEvento = null;
@@ -86,9 +90,12 @@ export class LaberintoDigital extends Phaser.Scene {
         this.crearBarraVolumenMinijuego();
     }
 
-    update(time, delta) {
-        if (this.yaTermino) return;
 
+    update(time, delta) {
+        if (this.yaTermino) {
+            this.actualizarAceptarInformeFinalRK();
+            return;
+        }
         if (this.preguntaActiva) {
             this.actualizarControlesPregunta(time);
             return;
@@ -289,6 +296,35 @@ export class LaberintoDigital extends Phaser.Scene {
         }
 
         return false;
+    }
+
+    botonAMandoPresionado(pad) {
+        return (
+            this.botonMandoPresionado(pad, 0) ||
+            this.botonMandoPresionado(pad, 5) ||
+            this.botonMandoPresionado(pad, 8)
+        );
+    }
+
+    actualizarAceptarInformeFinalRK() {
+        if (!this.informeFinalActivo || typeof this.continuarInformeFinal !== 'function') {
+            return;
+        }
+
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const aPresionado =
+            this.botonAMandoPresionado(pad1) ||
+            this.botonAMandoPresionado(pad2);
+
+        const aJustDown = aPresionado && !this.aInformeAnterior;
+
+        if (aJustDown) {
+            this.continuarInformeFinal();
+        }
+
+        this.aInformeAnterior = aPresionado;
     }
 
     generarLaberinto() {
@@ -1017,6 +1053,7 @@ export class LaberintoDigital extends Phaser.Scene {
         return this.obtenerCeldaLibreAleatoria();
     }
 
+
     verificarPreguntas(jugador) {
         if (!jugador || this.preguntaActiva) return;
 
@@ -1476,6 +1513,10 @@ export class LaberintoDigital extends Phaser.Scene {
     }
 
     mostrarInformeFinal() {
+        this.informeFinalActivo = true;
+        this.aInformeAnterior = false;
+        this.continuarInformeFinal = null;
+
         const bonus = this.calcularBonus(this.encontrados);
         const puntajeBase = this.puntajeDia || {};
 
@@ -1588,7 +1629,10 @@ export class LaberintoDigital extends Phaser.Scene {
             btn.setFillStyle(0x2d82ff, 1);
         });
 
-        zone.on('pointerdown', () => {
+        const continuar = () => {
+            if (!this.informeFinalActivo) return;
+
+            this.informeFinalActivo = false;
             this.reproducirClick();
 
             this.cameras.main.fadeOut(350, 0, 0, 0);
@@ -1609,7 +1653,11 @@ export class LaberintoDigital extends Phaser.Scene {
                     }
                 });
             });
-        });
+        };
+
+        this.continuarInformeFinal = continuar;
+
+        zone.on('pointerdown', continuar);
     }
 
     cargarAudioMinijuego() {

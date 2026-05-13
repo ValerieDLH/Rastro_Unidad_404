@@ -1077,35 +1077,6 @@ export class AtrapaEvidencia extends Phaser.Scene {
         this.aNotaAnterior = aPresionado;
     }
 
-    botonAMandoPresionado(pad) {
-        return (
-            this.botonMandoPresionado(pad, 0) ||
-            this.botonMandoPresionado(pad, 5) ||
-            this.botonMandoPresionado(pad, 8)
-        );
-    }
-
-    actualizarAceptarNotaFinalRK() {
-        if (!this.notaFinalActiva || typeof this.continuarNotaFinal !== 'function') {
-            return;
-        }
-
-        const pad1 = this.obtenerMando(1);
-        const pad2 = this.obtenerMando(2);
-
-        const aPresionado =
-            this.botonAMandoPresionado(pad1) ||
-            this.botonAMandoPresionado(pad2);
-
-        const aJustDown = aPresionado && !this.aNotaAnterior;
-
-        if (aJustDown) {
-            this.continuarNotaFinal();
-        }
-
-        this.aNotaAnterior = aPresionado;
-    }
-
     reproducirClick(volumen = 0.35) {
         if (this.cache.audio.exists('click')) {
             this.sound.play('click', { volume: volumen });

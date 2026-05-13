@@ -6,27 +6,23 @@ export class ModoJuego extends Phaser.Scene {
     init(data) {
         data = data || {};
 
-        const volumenInicial = typeof data.volumenActual === 'number'
-            ? data.volumenActual
-            : 0.6;
-
-        this.volumenActual = this._obtenerVolumenGlobal(volumenInicial);
-
+        this.volumenActual = typeof data.volumenActual === 'number' ? data.volumenActual : 0.25;
         this.modoSeleccionado = null;
         this.yaTransicionando = false;
         this.arrastrandoVolumen = false;
 
+        // Movidos 20 px a la derecha y 10 px hacia abajo
         this.area1Player = {
-            x: 501,
-            y: 423,
+            x: 541,
+            y: 433,
             width: 330,
             height: 490
         };
 
         this.area2Player = {
-            x: 855,
-            y: 423,
-            width: 350,
+            x: 885,
+            y: 433,
+            width: 340,
             height: 490
         };
 
@@ -66,55 +62,26 @@ export class ModoJuego extends Phaser.Scene {
 
         if (!this.sonidoContexto) {
             this.sonidoContexto = this.sound.add('contexto', {
-                volume: this.volumenActual,
+                volume: 0.25,
                 loop: true
             });
         }
 
+        this.volumenActual = 0.25;
         this.sonidoContexto.setVolume(this.volumenActual);
 
         if (!this.sonidoContexto.isPlaying) {
             this.sonidoContexto.play();
         }
 
-        this.keys = this.input.keyboard.addKeys({
-            X: Phaser.Input.Keyboard.KeyCodes.X,
-            B: Phaser.Input.Keyboard.KeyCodes.B
-        });
-
         this.crearBotonBack();
         this.crearBotonNext();
         this.crearAreasModo();
         this.crearIndicadorSeleccion();
         this.crearControlVolumen();
-        this.crearAvisoControlesRK();
-        this.iniciarRKModoJuego();
 
         this.events.on('shutdown', this.limpiarEventosVolumen, this);
         this.events.on('destroy', this.limpiarEventosVolumen, this);
-    }
-
-    update() {
-        this.actualizarTecladoModoJuego();
-        this.actualizarRKModoJuego();
-    }
-
-    _obtenerVolumenGlobal(volumenPorDefecto = 0.6) {
-        let volumen = this.game.registry.get('volumenGlobal');
-
-        if (typeof volumen !== 'number') {
-            volumen = volumenPorDefecto;
-            this.game.registry.set('volumenGlobal', volumen);
-        }
-
-        return Phaser.Math.Clamp(volumen, 0, 1);
-    }
-
-    _guardarVolumenGlobal(volumen) {
-        volumen = Phaser.Math.Clamp(volumen, 0, 1);
-
-        this.volumenActual = volumen;
-        this.game.registry.set('volumenGlobal', volumen);
     }
 
     reproducirClick() {
@@ -123,128 +90,6 @@ export class ModoJuego extends Phaser.Scene {
                 volume: 0.35
             });
         }
-    }
-
-    crearAvisoControlesRK() {
-        this.avisoControlesRK = this.add.text(
-            690,
-            180,
-            'X = 1 Player                  B = 2 Player',
-            {
-                fontFamily: '"VT323", monospace',
-                fontSize: '30px',
-                color: '#ffffff',
-                stroke: '#061225',
-                strokeThickness: 5,
-                align: 'center'
-            }
-        );
-
-        this.avisoControlesRK.setOrigin(0.5);
-        this.avisoControlesRK.setDepth(80);
-    }
-
-    iniciarRKModoJuego() {
-        this.rkModoAnterior = {
-            x: false,
-            b: false,
-            l1: false,
-            r1: false
-        };
-    }
-
-    actualizarTecladoModoJuego() {
-        if (this.yaTransicionando) return;
-
-        if (Phaser.Input.Keyboard.JustDown(this.keys.X)) {
-            this.reproducirClick();
-            this.seleccionarModo('1P');
-        }
-
-        if (Phaser.Input.Keyboard.JustDown(this.keys.B)) {
-            this.reproducirClick();
-            this.seleccionarModo('2P');
-        }
-    }
-
-    actualizarRKModoJuego() {
-        if (this.yaTransicionando) return;
-
-        const pad = this.obtenerPadRKModoJuego();
-        if (!pad) return;
-
-        const xPresionado = this.botonXRK(pad);
-        const bPresionado = this.botonBRK(pad);
-        const l1Presionado = this.botonRKModoJuego(pad, 6);
-        const r1Presionado = this.botonRKModoJuego(pad, 7);
-
-        const xJustDown = xPresionado && !this.rkModoAnterior.x;
-        const bJustDown = bPresionado && !this.rkModoAnterior.b;
-        const l1JustDown = l1Presionado && !this.rkModoAnterior.l1;
-        const r1JustDown = r1Presionado && !this.rkModoAnterior.r1;
-
-        if (xJustDown) {
-            this.reproducirClick();
-            this.seleccionarModo('1P');
-        }
-
-        if (bJustDown) {
-            this.reproducirClick();
-            this.seleccionarModo('2P');
-        }
-
-        if (l1JustDown) {
-            this.reproducirClick();
-            this.irAInstrucciones();
-        }
-
-        if (r1JustDown) {
-            if (!this.modoSeleccionado) {
-                this.mostrarAvisoSeleccion();
-            } else {
-                this.reproducirClick();
-                this.irAlJuego();
-            }
-        }
-
-        this.rkModoAnterior.x = xPresionado;
-        this.rkModoAnterior.b = bPresionado;
-        this.rkModoAnterior.l1 = l1Presionado;
-        this.rkModoAnterior.r1 = r1Presionado;
-    }
-
-    obtenerPadRKModoJuego() {
-        if (!this.input.gamepad) return null;
-
-        if (typeof this.input.gamepad.getPad === 'function') {
-            return this.input.gamepad.getPad(0);
-        }
-
-        if (this.input.gamepad.gamepads) {
-            return this.input.gamepad.gamepads[0] || null;
-        }
-
-        return null;
-    }
-
-    botonRKModoJuego(pad, index) {
-        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
-
-        const boton = pad.buttons[index];
-        const valor = typeof boton.value === 'number' ? boton.value : 0;
-
-        return boton.pressed === true || valor > 0.35;
-    }
-
-    botonXRK(pad) {
-        return (
-            this.botonRKModoJuego(pad, 2) ||
-            this.botonRKModoJuego(pad, 3)
-        );
-    }
-
-    botonBRK(pad) {
-        return this.botonRKModoJuego(pad, 1);
     }
 
     crearBotonBack() {
@@ -282,7 +127,15 @@ export class ModoJuego extends Phaser.Scene {
             if (this.yaTransicionando) return;
 
             this.reproducirClick();
-            this.irAInstrucciones();
+            this.yaTransicionando = true;
+
+            this.cameras.main.fadeOut(350, 0, 0, 0);
+
+            this.time.delayedCall(350, () => {
+                this.scene.start('Instrucciones', {
+                    volumenActual: this.volumenActual
+                });
+            });
         });
     }
 
@@ -338,7 +191,7 @@ export class ModoJuego extends Phaser.Scene {
             this.area1Player.height
         );
 
-        this.zona1Player.setDepth(15);
+        this.zona1Player.setDepth(25);
         this.zona1Player.setInteractive({ cursor: 'pointer' });
 
         this.zona2Player = this.add.zone(
@@ -348,22 +201,17 @@ export class ModoJuego extends Phaser.Scene {
             this.area2Player.height
         );
 
-        this.zona2Player.setDepth(15);
+        this.zona2Player.setDepth(25);
         this.zona2Player.setInteractive({ cursor: 'pointer' });
 
         this.zona1Player.on('pointerover', () => {
             if (this.yaTransicionando) return;
-
-            this.marco1.setVisible(true);
-            this.marco1.setAlpha(this.modoSeleccionado === '1P' ? 1 : 0.45);
+            this.encenderCuadroSeleccion('1P', false);
         });
 
         this.zona1Player.on('pointerout', () => {
             if (this.yaTransicionando) return;
-
-            if (this.modoSeleccionado !== '1P') {
-                this.marco1.setVisible(false);
-            }
+            this.apagarCuadroSeleccion('1P');
         });
 
         this.zona1Player.on('pointerdown', () => {
@@ -375,17 +223,12 @@ export class ModoJuego extends Phaser.Scene {
 
         this.zona2Player.on('pointerover', () => {
             if (this.yaTransicionando) return;
-
-            this.marco2.setVisible(true);
-            this.marco2.setAlpha(this.modoSeleccionado === '2P' ? 1 : 0.45);
+            this.encenderCuadroSeleccion('2P', false);
         });
 
         this.zona2Player.on('pointerout', () => {
             if (this.yaTransicionando) return;
-
-            if (this.modoSeleccionado !== '2P') {
-                this.marco2.setVisible(false);
-            }
+            this.apagarCuadroSeleccion('2P');
         });
 
         this.zona2Player.on('pointerdown', () => {
@@ -404,7 +247,7 @@ export class ModoJuego extends Phaser.Scene {
                 0x00ff00,
                 0.18
             );
-            this.debug1.setDepth(14);
+            this.debug1.setDepth(24);
             this.debug1.setStrokeStyle(3, 0x00ff00, 1);
 
             this.debug2 = this.add.rectangle(
@@ -415,12 +258,23 @@ export class ModoJuego extends Phaser.Scene {
                 0xff0000,
                 0.18
             );
-            this.debug2.setDepth(14);
+            this.debug2.setDepth(24);
             this.debug2.setStrokeStyle(3, 0xff0000, 1);
         }
     }
 
     crearIndicadorSeleccion() {
+        this.brillo1 = this.add.rectangle(
+            this.area1Player.x,
+            this.area1Player.y,
+            this.area1Player.width,
+            this.area1Player.height,
+            0x6fb6ff,
+            0.16
+        );
+        this.brillo1.setDepth(14);
+        this.brillo1.setVisible(false);
+
         this.marco1 = this.add.rectangle(
             this.area1Player.x,
             this.area1Player.y,
@@ -430,8 +284,19 @@ export class ModoJuego extends Phaser.Scene {
             0
         );
         this.marco1.setDepth(16);
-        this.marco1.setStrokeStyle(5, 0x6fb6ff, 1);
+        this.marco1.setStrokeStyle(6, 0xffd27a, 1);
         this.marco1.setVisible(false);
+
+        this.brillo2 = this.add.rectangle(
+            this.area2Player.x,
+            this.area2Player.y,
+            this.area2Player.width,
+            this.area2Player.height,
+            0x6fb6ff,
+            0.16
+        );
+        this.brillo2.setDepth(14);
+        this.brillo2.setVisible(false);
 
         this.marco2 = this.add.rectangle(
             this.area2Player.x,
@@ -442,7 +307,7 @@ export class ModoJuego extends Phaser.Scene {
             0
         );
         this.marco2.setDepth(16);
-        this.marco2.setStrokeStyle(5, 0x6fb6ff, 1);
+        this.marco2.setStrokeStyle(6, 0xffd27a, 1);
         this.marco2.setVisible(false);
 
         this.txtSeleccion = this.add.text(670, 695, '', {
@@ -456,31 +321,93 @@ export class ModoJuego extends Phaser.Scene {
         this.txtSeleccion.setDepth(22);
     }
 
+    encenderCuadroSeleccion(modo, seleccionado) {
+        const marco = modo === '1P' ? this.marco1 : this.marco2;
+        const brillo = modo === '1P' ? this.brillo1 : this.brillo2;
+
+        if (!marco || !brillo) return;
+
+        brillo.setVisible(true);
+        brillo.setAlpha(seleccionado ? 0.24 : 0.16);
+
+        marco.setVisible(true);
+        marco.setAlpha(seleccionado ? 1 : 0.72);
+
+        marco.setStrokeStyle(
+            seleccionado ? 7 : 5,
+            seleccionado ? 0xffd27a : 0x8fd5ff,
+            1
+        );
+
+        this.tweens.killTweensOf([marco, brillo]);
+
+        this.tweens.add({
+            targets: [marco, brillo],
+            scaleX: seleccionado ? 1.025 : 1.015,
+            scaleY: seleccionado ? 1.025 : 1.015,
+            duration: 120,
+            ease: 'Sine.easeOut'
+        });
+    }
+
+    apagarCuadroSeleccion(modo) {
+        if (this.modoSeleccionado === modo) return;
+
+        const marco = modo === '1P' ? this.marco1 : this.marco2;
+        const brillo = modo === '1P' ? this.brillo1 : this.brillo2;
+
+        if (!marco || !brillo) return;
+
+        this.tweens.killTweensOf([marco, brillo]);
+
+        marco.setScale(1);
+        brillo.setScale(1);
+
+        marco.setVisible(false);
+        brillo.setVisible(false);
+    }
+
     seleccionarModo(modo) {
         this.modoSeleccionado = modo;
 
         if (modo === '1P') {
-            this.marco1.setVisible(true);
-            this.marco1.setAlpha(1);
+            this.encenderCuadroSeleccion('1P', true);
 
-            this.marco2.setVisible(false);
+            if (this.marco2) {
+                this.marco2.setVisible(false);
+                this.marco2.setScale(1);
+            }
+
+            if (this.brillo2) {
+                this.brillo2.setVisible(false);
+                this.brillo2.setScale(1);
+            }
 
             this.txtSeleccion.setText('Modo seleccionado: 1 Player');
         }
 
         if (modo === '2P') {
-            this.marco2.setVisible(true);
-            this.marco2.setAlpha(1);
+            this.encenderCuadroSeleccion('2P', true);
 
-            this.marco1.setVisible(false);
+            if (this.marco1) {
+                this.marco1.setVisible(false);
+                this.marco1.setScale(1);
+            }
 
-            this.txtSeleccion.setText('Modo seleccionado: 2 Player');
+            if (this.brillo1) {
+                this.brillo1.setVisible(false);
+                this.brillo1.setScale(1);
+            }
+
+            this.txtSeleccion.setText('Modo seleccionado: 2 Players');
         }
 
+        const marcoSeleccionado = modo === '1P' ? this.marco1 : this.marco2;
+
         this.tweens.add({
-            targets: modo === '1P' ? this.marco1 : this.marco2,
-            scaleX: 1.03,
-            scaleY: 1.03,
+            targets: marcoSeleccionado,
+            scaleX: 1.04,
+            scaleY: 1.04,
             duration: 120,
             yoyo: true,
             ease: 'Sine.easeInOut'
@@ -494,7 +421,7 @@ export class ModoJuego extends Phaser.Scene {
 
         this.reproducirClick();
 
-        this.avisoSeleccion = this.add.text(690, 700, 'Selecciona primero con X o B', {
+        this.avisoSeleccion = this.add.text(640, 620, 'Selecciona primero 1 Player o 2 Players', {
             fontFamily: '"VT323", monospace',
             fontSize: '32px',
             color: '#fff2a8',
@@ -617,7 +544,8 @@ export class ModoJuego extends Phaser.Scene {
         const xClamped = Phaser.Math.Clamp(pointerX, izquierda, derecha);
         const ratio = (xClamped - izquierda) / this.sliderWidth;
 
-        this._guardarVolumenGlobal(ratio);
+        this.volumenActual = Phaser.Math.Clamp(ratio, 0, 1);
+        this.game.registry.set('volumenGlobal', this.volumenActual);
 
         if (this.sonidoContexto) {
             this.sonidoContexto.setVolume(this.volumenActual);
@@ -631,31 +559,13 @@ export class ModoJuego extends Phaser.Scene {
     limpiarEventosVolumen() {
         if (this.pointerMoveVolHandler) {
             this.input.off('pointermove', this.pointerMoveVolHandler);
+            this.pointerMoveVolHandler = null;
         }
 
         if (this.pointerUpVolHandler) {
             this.input.off('pointerup', this.pointerUpVolHandler);
+            this.pointerUpVolHandler = null;
         }
-    }
-
-    irAInstrucciones() {
-        if (this.yaTransicionando) return;
-
-        this.yaTransicionando = true;
-
-        if (this.backZone) this.backZone.disableInteractive();
-        if (this.nextZone) this.nextZone.disableInteractive();
-        if (this.zona1Player) this.zona1Player.disableInteractive();
-        if (this.zona2Player) this.zona2Player.disableInteractive();
-        if (this.sliderZone) this.sliderZone.disableInteractive();
-
-        this.cameras.main.fadeOut(350, 0, 0, 0);
-
-        this.time.delayedCall(350, () => {
-            this.scene.start('Instrucciones', {
-                volumenActual: this.volumenActual
-            });
-        });
     }
 
     irAlJuego() {

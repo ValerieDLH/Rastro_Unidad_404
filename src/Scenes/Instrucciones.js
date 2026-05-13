@@ -58,7 +58,7 @@ export class Instrucciones extends Phaser.Scene {
         this.backZone.setDepth(25);
         this.backZone.setInteractive({ cursor: 'pointer' });
 
-        this.nextZone = this.add.zone(1185, 680, 260, 100);
+        this.nextZone = this.add.zone(1200, 680, 260, 100);
         this.nextZone.setDepth(25);
         this.nextZone.setInteractive({ cursor: 'pointer' });
 
