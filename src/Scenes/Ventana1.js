@@ -1289,10 +1289,21 @@ export class Ventana1 extends Phaser.Scene {
         const container = this.scrollState.container;
         const decision = this._obtenerDecisionDiaActual(pj);
 
-        // Separar texto principal y observación del detective
         const partes = (pj.textoCaso || '').split('///');
         const textoPrincipal = (partes[0] || '').trim();
-        const textoDetAlex = partes.length > 1 ? ('Det. Alex: ' + partes.slice(1).join('///').replace(/^Det\.\s*Alex:\s*/i, '').trim()) : '';
+
+        const pistaLimpia = partes.length > 1
+            ? partes
+                .slice(1)
+                .join('///')
+                .trim()
+                .replace(/^Det\.\s*Alex:\s*/i, '')
+                .trim()
+            : '';
+
+        const textoDetAlex = pistaLimpia
+            ? `Det. Alex: ${pistaLimpia}`
+            : '';
 
         const estiloNombre = {
             fontFamily: '"VT323", monospace',
