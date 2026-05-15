@@ -2635,6 +2635,8 @@ export class Ventana1 extends Phaser.Scene {
             algoritmoActual = 'PRIM'
         }
 
+        //test
+
         if (this.diaActual === 6){
             algoritmoActual = 'FORD'
         }
