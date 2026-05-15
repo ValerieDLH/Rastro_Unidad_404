@@ -22,7 +22,8 @@ export class Ventana1 extends Phaser.Scene {
         this.jugadores = typeof data.jugadores === 'number'
             ? data.jugadores
             : (this.modoJuego === '2P' ? 2 : 1);
-
+        this.algoritmoGrafo = data.algoritmoGrafo;
+        console.log("ALGORITMO RECIBIDO:", this.algoritmoGrafo);
         this.delitosEncontrados = Array.isArray(data.delitosEncontrados) ? data.delitosEncontrados : [];
         this.estadoBuscadorPorDia = data.estadoBuscadorPorDia || {};
         this.sancionesAsignadas = data.sancionesAsignadas || {};
@@ -2613,6 +2614,7 @@ export class Ventana1 extends Phaser.Scene {
             this.cerrarModalZone.disableInteractive();
         }
 
+        const puntajeDia = this._calcularPuntajeDia();
         const siguienteEstado = this._obtenerEstadoSiguienteDespuesDelPuntaje();
 
         let algoritmoActual = 'BFS';
@@ -2625,6 +2627,18 @@ export class Ventana1 extends Phaser.Scene {
             algoritmoActual = 'DIJKSTRA'
         }
 
+        if (this.diaActual === 4){
+            algoritmoActual = 'FLOYD'
+        }
+
+        if (this.diaActual === 5){
+            algoritmoActual = 'PRIM'
+        }
+
+        if (this.diaActual === 6){
+            algoritmoActual = 'FORD'
+        }
+
         const casosDelDia = this._deduplicarPersonajes(
             (this.delitosEncontrados || []).filter(pj => {
                 return pj && pj.dia === this.diaActual;
@@ -2635,12 +2649,73 @@ export class Ventana1 extends Phaser.Scene {
             this.cameras.main.fadeOut(420, 0, 0, 0);
 
             this.time.delayedCall(420, () => {
-                this.scene.start('GrafoDia', {
-                    diaActual: this.diaActual,
-                    algoritmo: algoritmoActual,
-                    casosDia: casosDelDia,
-                    siguienteEstado: siguienteEstado,
-                    volumenActual: this.volumenActual
+                if (this.diaActual === 1) {
+                    console.log("ENTRANDO A ATRAPA EVIDENCIA"),
+                    this.scene.start('AtrapaEvidencia', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+                if (this.diaActual === 2) {
+                    this.scene.start('DetenCadena', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+                if (this.diaActual === 3) {
+                    this.scene.start('CazaRumores', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+                if (this.diaActual === 4) {
+                    this.scene.start('MemoriaPistas', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+                if (this.diaActual === 5) {
+                    this.scene.start('LaberintoDigital', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+                this.scene.start('PuntajeDia', {
+                    puntajeDia,
+                    siguienteEstado,
+                    modoJuego: this.modoJuego,
+                    jugadores: this.jugadores
+                });
+                this.scene.start('PuntajeDia', {
+                    puntajeDia,
+                    siguienteEstado,
+                    modoJuego: this.modoJuego,
+                    jugadores: this.jugadores
                 });
             });
         });

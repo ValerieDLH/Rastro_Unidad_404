@@ -819,6 +819,7 @@ export class DetenCadena extends Phaser.Scene {
 
         const puntajeActualizado = {
             ...puntajeBase,
+            dia: 2,
             bonusMinijuego: bonus,
             totalBruto: (puntajeBase.totalBruto || 0) + bonus,
             total: (puntajeBase.total || 0) + bonus
@@ -931,6 +932,8 @@ export class DetenCadena extends Phaser.Scene {
                     siguienteEstado: this.siguienteEstado,
                     modoJuego: this.modoJuego,
                     jugadores: this.jugadores,
+                    algoritmoGrafo: 'DFS',
+                    casosDia: this.casos,
                     resultadoMinijuego: {
                         bonus: bonus,
                         jugador1: {

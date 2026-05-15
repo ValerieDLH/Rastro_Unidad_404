@@ -8,9 +8,11 @@ export class GrafoDia extends Phaser.Scene {
 
         data = data || {};
 
-        this.diaActual = data.diaActual || 1;
+        console.log("DIA RECIBIDO:", data.diaActual);
 
-        this.algoritmo = data.algoritmo || 'BFS';
+        this.diaActual = data.diaActual;
+
+        this.algoritmo = data.algoritmo;
 
         this.casosDia = Array.isArray(data.casosDia)
             ? data.casosDia
@@ -103,8 +105,21 @@ export class GrafoDia extends Phaser.Scene {
             this.animarDijkstra();
         }
         
-        else {
+        else if (this.algoritmo === 'BFS') {
             this.animarBFS();
+        }
+
+        else if (this.algoritmo === 'FLOYD'){
+            console.log("ENTRÓ A FLOYD");
+            this.animarFloyd();
+        }
+
+        else if (this.algoritmo === 'PRIM'){
+            this.animarPrim();
+        }
+
+        else if (this.algoritmo === 'FORD'){
+            this.animarFord();
         }
 
     }
@@ -251,9 +266,17 @@ export class GrafoDia extends Phaser.Scene {
         this.panelAnalisis =
             this.add.rectangle(
                 235,
-                395,
+
+                this.algoritmo === 'PRIM'
+                    ? 430 
+                    :395, 
+
                 360,
-                470,
+
+                this.algoritmo === 'PRIM'
+                    ? 520
+                    : 470,
+
                 0x041127,
                 0.96
             );
@@ -300,23 +323,51 @@ export class GrafoDia extends Phaser.Scene {
         this.txtEstadisticas.setDepth(21);
 
         this.add.rectangle(
+
             235,
-            505,
+
+            this.algoritmo === 'PRIM'
+                ? 430
+                : 505,
+
             260,
+
             2,
+
             0x2d6dcc,
+
             0.8
+
         ).setDepth(21);
 
         this.add.text(
             70,
-            535,
+
+            this.algoritmo === 'PRIM'
+                ? 455
+                : 535,
 
             this.algoritmo === 'DFS'
+
                 ? 'RECORRIDO DFS'
+
                 : this.algoritmo === 'DIJKSTRA'
+
                     ? 'RUTA ÓPTIMA'
-                    : 'RECORRIDO BFS',
+
+                    : this.algoritmo === 'FLOYD'
+
+                        ? 'RUTAS MÍNIMAS'
+
+                        : this.algoritmo === 'PRIM'
+
+                            ? 'ÁRBOL MÍNIMO'
+
+                            : this.algoritmo === 'FORD'
+
+                                ? 'FLUJO MÁXIMO'
+
+                                : 'RECORRIDO BFS',   
             {
                 fontFamily:
                     '"VT323", monospace',
@@ -330,8 +381,13 @@ export class GrafoDia extends Phaser.Scene {
         this.txtRecorrido =
             this.add.text(
                 70,
-                585,
+
+            this.algoritmo === 'PRIM'
+                ? 505
+                : 585,
+
                 '',
+
                 {
                     fontFamily:
                         '"VT323", monospace',
@@ -616,7 +672,7 @@ export class GrafoDia extends Phaser.Scene {
             const cont =
                 this.add.container(
                     nodo.x,
-                    nodo.y
+                    nodo.y - 40
                 );
 
             cont.setDepth(20);
@@ -1158,6 +1214,959 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
+    obtenerFloydWarshall() {
+
+        const n = this.nodos.length;
+
+        const dist = [];
+
+        for (let i = 0; i < n; i++) {
+
+            dist[i] = [];
+
+            for (let j = 0; j < n; j++) {
+
+                if (i === j) {
+
+                    dist[i][j] = 0;
+
+                }
+
+                else {
+
+                    dist[i][j] = Infinity;
+
+                }
+
+            }
+
+        }
+
+        this.aristas.forEach(arista => {
+
+            const i = this.nodos.findIndex(
+                n => n.id === arista.from
+            );
+
+            const j = this.nodos.findIndex(
+                n => n.id === arista.to
+            );
+
+            if (i >= 0 && j >= 0) {
+
+                dist[i][j] = arista.peso;
+
+                dist[j][i] = arista.peso;
+
+            }
+
+        });
+
+        for (let k = 0; k < n; k++) {
+
+            for (let i = 0; i < n; i++) {
+
+                for (let j = 0; j < n; j++) {
+
+                    if (
+
+                        dist[i][k] !== Infinity
+
+                        &&
+
+                        dist[k][j] !== Infinity
+
+                        &&
+
+                        dist[i][k] + dist[k][j]
+                        < dist[i][j]
+
+                    ) {
+
+                        dist[i][j] =
+                            dist[i][k]
+                            + dist[k][j];
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        return {
+            dist
+        };
+
+    }
+
+    animarFloyd() {
+
+        const resultado =
+            this.obtenerFloydWarshall();
+
+        const n =
+            this.nodos.length;
+
+        if (n < 2) {
+
+            this.txtEstadoDinamico.setText(
+                'No hay suficientes nodos para aplicar Floyd-Warshall.'
+            );
+
+            this.mostrarBotonContinuar();
+
+            return;
+
+        }
+
+        let mejorCosto = Infinity;
+
+        let mejorI = 0;
+
+        let mejorJ = 0;
+
+        for (let i = 0; i < n; i++) {
+
+            for (let j = 0; j < n; j++) {
+
+                if (
+
+                    i !== j
+
+                    &&
+
+                    resultado.dist[i][j] < mejorCosto
+
+                ) {
+
+                    mejorCosto =
+                        resultado.dist[i][j];
+
+                    mejorI = i;
+
+                    mejorJ = j;
+
+                }
+
+            }
+
+        }
+
+        const rutaIndices = [
+            mejorI,
+            mejorJ
+        ];
+
+        const rutaIds =
+            rutaIndices.map(
+                index => this.nodos[index].id
+            );
+
+        let nombresRuta = [];
+
+        rutaIds.forEach((idNodo, index) => {
+
+            this.time.delayedCall(
+
+                900 + index * 1300,
+
+                () => {
+
+                    const nodo =
+                        this.nodos.find(
+                            n => n.id === idNodo
+                        );
+
+                    if (!nodo) return;
+
+                    nombresRuta.push(
+                        nodo.nombre
+                    );
+
+                    nodo.halo.setFillStyle(
+                        0x9333ea,
+                        1
+                    );
+
+                    nodo.halo.setStrokeStyle(
+                        5,
+                        0xe9d5ff,
+                        1
+                    );
+
+                    this.tweens.add({
+
+                        targets:
+                            nodo.container,
+
+                        scaleX: 1.16,
+
+                        scaleY: 1.16,
+
+                        duration: 280,
+
+                        yoyo: true
+
+                    });
+
+                    if (index > 0) {
+
+                        const anterior =
+                            rutaIds[index - 1];
+
+                        this.resaltarRutaFloyd(
+                            anterior,
+                            idNodo
+                        );
+
+                    }
+
+                    this.txtRecorrido.setText(
+                        nombresRuta.join(' → ')
+                    );
+
+                    this.txtEstadoDinamico.setText(
+                        `Analizando rutas globales...\n${nodo.nombre}`
+                    );
+
+                }
+
+            );
+
+        });
+
+        this.time.delayedCall(
+
+            1500 + rutaIds.length * 1300,
+
+            () => {
+
+                this.mostrarConclusionFloyd(
+                    resultado,
+                    rutaIds
+                );
+
+            }
+
+        );
+
+    }
+
+    resaltarRutaFloyd(idA, idB) {
+
+        this.aristas.forEach(arista => {
+
+            const coincide =
+
+                (
+                    arista.from === idA
+                    && arista.to === idB
+                )
+
+                ||
+
+                (
+                    arista.from === idB
+                    && arista.to === idA
+                );
+
+            if (coincide) {
+
+                arista.graphics.clear();
+
+                arista.graphics.lineStyle(
+                    7,
+                    0xe9d5ff,
+                    1
+                );
+
+                arista.graphics.beginPath();
+
+                arista.graphics.moveTo(
+                    arista.nodoA.x,
+                    arista.nodoA.y
+                );
+
+                arista.graphics.lineTo(
+                    arista.nodoB.x,
+                    arista.nodoB.y
+                );
+
+                arista.graphics.strokePath();
+
+                if (arista.textoPeso) {
+
+                    arista.textoPeso.setColor(
+                        '#e9d5ff'
+                    );
+
+                    arista.textoPeso.setFontSize(
+                        '28px'
+                    );
+
+                }
+
+            }
+
+        });
+
+    }
+
+    mostrarConclusionFloyd(resultado, rutaIds) {
+
+        let mejorCosto = Infinity;
+
+        resultado.dist.forEach(fila => {
+
+            fila.forEach(valor => {
+
+                if (
+
+                    valor !== 0
+
+                    &&
+
+                    valor < mejorCosto
+
+                ) {
+
+                    mejorCosto = valor;
+
+                }
+
+            });
+
+        });
+
+        const paresAnalizados =
+            this.nodos.length
+            * this.nodos.length;
+
+        this.txtEstadisticas.setText(
+
+            `Nodos evaluados: ${this.nodos.length}\n`
+
+            + `Pares analizados:${paresAnalizados}\n`
+
+            + `Costo mínimo:${mejorCosto}\n`
+
+            + `Análisis global completado`
+
+        );
+
+        const nombresRuta =
+            rutaIds.map(idNodo => {
+
+                const nodo =
+                    this.nodos.find(
+                        n => n.id === idNodo
+                    );
+
+                return nodo
+                    ? nodo.nombre
+                    : '';
+
+            }).filter(
+                nombre => nombre !== ''
+            );
+
+        this.txtRecorrido.setText(
+
+            nombresRuta.join(' → ')
+
+        );
+
+        this.txtEstadoDinamico.setText(
+            'Floyd-Warshall completado.'
+        );
+
+        this.mostrarBotonContinuar();
+
+    }
+
+    obtenerPrim() {
+
+        if (!this.nodos || this.nodos.length === 0) {
+
+            return {
+                aristas: [],
+                costoTotal: 0
+            };
+
+        }
+
+        const visitados =
+            new Set();
+
+        const aristasMST = [];
+
+        let costoTotal = 0;
+
+        visitados.add(
+            this.nodos[0].id
+        );
+
+        while (
+
+            visitados.size
+            < this.nodos.length
+
+        ) {
+
+            let mejorArista = null;
+
+            this.aristas.forEach(arista => {
+
+                const fromVisitado =
+                    visitados.has(
+                        arista.from
+                    );
+
+                const toVisitado =
+                    visitados.has(
+                        arista.to
+                    );
+
+                const conectaNuevoNodo =
+
+                    (
+
+                        fromVisitado
+                        && !toVisitado
+
+                    )
+
+                    ||
+
+                    (
+
+                        !fromVisitado
+                        && toVisitado
+
+                    );
+
+                if (conectaNuevoNodo) {
+
+                    if (
+
+                        !mejorArista
+
+                        ||
+
+                        arista.peso
+                        < mejorArista.peso
+
+                    ) {
+
+                        mejorArista =
+                            arista;
+
+                    }
+
+                }
+
+            });
+
+            if (!mejorArista) {
+                break;
+            }
+
+            aristasMST.push(
+                mejorArista
+            );
+
+            costoTotal +=
+                mejorArista.peso;
+
+            visitados.add(
+                mejorArista.from
+            );
+
+            visitados.add(
+                mejorArista.to
+            );
+
+        }
+
+        return {
+
+            aristas:
+                aristasMST,
+
+            costoTotal
+
+        };
+
+    }
+
+    animarPrim() {
+
+        const resultado =
+            this.obtenerPrim();
+
+        const aristas =
+            resultado.aristas;
+
+        if (!aristas || aristas.length === 0) {
+
+            this.txtEstadoDinamico.setText(
+                'No se pudo construir el árbol mínimo.'
+            );
+
+            this.mostrarBotonContinuar();
+
+            return;
+
+        }
+
+        let conexiones = [];
+
+        aristas.forEach(
+
+            (arista, index) => {
+
+                this.time.delayedCall(
+
+                    1000 + index * 1400,
+
+                    () => {
+
+                        arista.graphics.clear();
+
+                        arista.graphics.lineStyle(
+                            8,
+                            0xfacc15,
+                            1
+                        );
+
+                        arista.graphics.beginPath();
+
+                        arista.graphics.moveTo(
+                            arista.nodoA.x,
+                            arista.nodoA.y
+                        );
+
+                        arista.graphics.lineTo(
+                            arista.nodoB.x,
+                            arista.nodoB.y
+                        );
+
+                        arista.graphics.strokePath();
+
+                        arista.nodoA.halo.setFillStyle(
+                            0xeab308,
+                            1
+                        );
+
+                        arista.nodoA.halo.setStrokeStyle(
+                            5,
+                            0xfef08a,
+                            1
+                        );
+
+                        arista.nodoB.halo.setFillStyle(
+                            0xeab308,
+                            1
+                        );
+
+                        arista.nodoB.halo.setStrokeStyle(
+                            5,
+                            0xfef08a,
+                            1
+                        );
+
+                        if (arista.textoPeso) {
+
+                            arista.textoPeso.setColor(
+                                '#fde68a'
+                            );
+
+                            arista.textoPeso.setFontSize(
+                                '30px'
+                            );
+
+                        }
+
+                        conexiones.push(
+
+                            `${arista.nodoA.nombre} ↔ ${arista.nodoB.nombre}`
+
+                        );
+
+                        this.txtRecorrido.setText(
+
+                            conexiones.join('\n')
+
+                        );
+
+                        this.txtEstadoDinamico.setText(
+
+                            `Construyendo árbol mínimo...\nCosto acumulado: ${resultado.costoTotal}`
+
+                        );
+
+                        this.tweens.add({
+
+                            targets: [
+
+                                arista.nodoA.container,
+                                arista.nodoB.container
+
+                            ],
+
+                            scaleX: 1.12,
+
+                            scaleY: 1.12,
+
+                            duration: 220,
+
+                            yoyo: true
+
+                        });
+
+                    }
+
+                );
+
+            }
+
+        );
+
+        this.time.delayedCall(
+
+            1800 + aristas.length * 1400,
+
+            () => {
+
+                this.mostrarConclusionPrim(
+                    resultado
+                );
+
+            }
+
+        );
+
+    }
+
+    mostrarConclusionPrim(resultado) {
+
+        this.txtEstadisticas.setText(
+
+            `Nodos conectados: ${this.nodos.length}\n`
+
+            + `Aristas usadas: ${resultado.aristas.length}\n`
+
+            + `Costo total: ${resultado.costoTotal}`
+
+            + `Árbol mínimo generado`
+
+        );
+
+        this.txtEstadoDinamico.setText(
+            'Prim completado.'
+        );
+
+        this.mostrarBotonContinuar();
+
+    }
+
+    obtenerFordFulkerson() {
+
+        if (!this.nodos || this.nodos.length < 2) {
+
+            return {
+                flujoMaximo: 0,
+                caminos: []
+            };
+
+        }
+
+        const source =
+            this.nodos[0].id;
+
+        const sink =
+            this.nodos[
+                this.nodos.length - 1
+            ].id;
+
+        const residual = {};
+
+        this.nodos.forEach(nodo => {
+
+            residual[nodo.id] = {};
+
+        });
+
+        this.aristas.forEach(arista => {
+
+            residual[arista.from][arista.to] =
+                arista.peso;
+
+            residual[arista.to][arista.from] =
+                arista.peso;
+
+        });
+
+        let flujoMaximo = 0;
+
+        const caminos = [];
+
+        while (true) {
+
+            const parent = {};
+
+            const visitados =
+                new Set();
+
+            const queue = [];
+
+            queue.push(source);
+
+            visitados.add(source);
+
+            while (queue.length > 0) {
+
+                const actual =
+                    queue.shift();
+
+                for (const vecino in residual[actual]) {
+
+                    if (
+
+                        !visitados.has(vecino)
+
+                        &&
+
+                        residual[actual][vecino] > 0
+
+                    ) {
+
+                        visitados.add(vecino);
+
+                        parent[vecino] =
+                            actual;
+
+                        queue.push(vecino);
+
+                    }
+
+                }
+
+            }
+
+            if (!visitados.has(sink))
+                break;
+
+            let flujoCamino =
+                Infinity;
+
+            let s = sink;
+
+            while (s !== source) {
+
+                const p = parent[s];
+
+                flujoCamino = Math.min(
+
+                    flujoCamino,
+
+                    residual[p][s]
+
+                );
+
+                s = p;
+
+            }
+
+            flujoMaximo +=
+                flujoCamino;
+
+            const caminoActual = [];
+
+            s = sink;
+
+            while (s !== source) {
+
+                const p = parent[s];
+
+                residual[p][s] -=
+                    flujoCamino;
+
+                residual[s][p] +=
+                    flujoCamino;
+
+                caminoActual.unshift({
+                    from: p,
+                    to: s
+                });
+
+                s = p;
+
+            }
+
+            caminos.push({
+
+                flujo: flujoCamino,
+
+                aristas: caminoActual
+
+            });
+
+        }
+
+        return {
+
+            flujoMaximo,
+
+            caminos
+
+        };
+
+    }
+
+    animarFord() {
+
+        const resultado =
+            this.obtenerFordFulkerson();
+
+        let textos = [];
+
+        resultado.caminos.forEach(
+
+            (camino, index) => {
+
+                this.time.delayedCall(
+
+                    1000 + index * 1800,
+
+                    () => {
+
+                        camino.aristas.forEach(a => {
+
+                            this.aristas.forEach(arista => {
+
+                                const coincide =
+
+                                    (
+
+                                        arista.from === a.from
+                                        && arista.to === a.to
+
+                                    )
+
+                                    ||
+
+                                    (
+
+                                        arista.from === a.to
+                                        && arista.to === a.from
+
+                                    );
+
+                                if (coincide) {
+
+                                    arista.graphics.clear();
+
+                                    arista.graphics.lineStyle(
+                                        9,
+                                        0xef4444,
+                                        1
+                                    );
+
+                                    arista.graphics.beginPath();
+
+                                    arista.graphics.moveTo(
+                                        arista.nodoA.x,
+                                        arista.nodoA.y
+                                    );
+
+                                    arista.graphics.lineTo(
+                                        arista.nodoB.x,
+                                        arista.nodoB.y
+                                    );
+
+                                    arista.graphics.strokePath();
+
+                                    arista.nodoA.halo.setFillStyle(
+                                        0xdc2626,
+                                        1
+                                    );
+
+                                    arista.nodoB.halo.setFillStyle(
+                                        0xdc2626,
+                                        1
+                                    );
+
+                                }
+
+                            });
+
+                        });
+
+                        textos.push(
+
+                            `Flujo enviado: ${camino.flujo}`
+
+                        );
+
+                        this.txtRecorrido.setText(
+                            textos.join('\n')
+                        );
+
+                        this.txtEstadoDinamico.setText(
+
+                            `Propagando flujo máximo...\nTotal actual: ${resultado.flujoMaximo}`
+
+                        );
+
+                    }
+
+                );
+
+            }
+
+        );
+
+        this.time.delayedCall(
+
+            1800 + resultado.caminos.length * 1800,
+
+            () => {
+
+                this.mostrarConclusionFord(
+                    resultado
+                );
+
+            }
+
+        );
+
+    }
+
+    mostrarConclusionFord(resultado) {
+
+        this.txtEstadisticas.setText(
+
+            `Nodos analizados: ${this.nodos.length}`
+
+            + `Caminos aumentantes:\n${resultado.caminos.length}\n`
+
+            + `Flujo máximo:\n${resultado.flujoMaximo}`
+
+            + `Capacidad máxima detectada`
+
+        );
+
+        this.txtEstadoDinamico.setText(
+            'Ford-Fulkerson completado.'
+        );
+
+        this.mostrarBotonContinuar();
+
+    }
+
     obtenerOrdenDFS() {
 
         if (!this.nodos || this.nodos.length === 0) {
@@ -1305,9 +2314,9 @@ export class GrafoDia extends Phaser.Scene {
 
         this.txtEstadisticas.setText(
 
-            `Casos explorados: ${orden.length}\n\n`
+            `Casos explorados: ${orden.length}\n`
 
-            + `Profundidad DFS: ${profundidadMaxima}\n\n`
+            + `Profundidad DFS: ${profundidadMaxima}\n`
 
             + `Relaciones:\n${conexionesTexto}`
 
@@ -1427,9 +2436,9 @@ export class GrafoDia extends Phaser.Scene {
 
         this.txtEstadisticas.setText(
 
-            `Casos analizados: ${orden.length}\n\n`
+            `Casos analizados: ${orden.length}\n`
 
-            + `Niveles BFS: ${niveles}\n\n`
+            + `Niveles BFS: ${niveles}\n`
 
             + `Relaciones:\n${conexionesTexto}`
 
@@ -1508,14 +2517,16 @@ export class GrafoDia extends Phaser.Scene {
 
     mostrarBotonContinuar() {
 
+        this.txtEstadoDinamico.setText('');
+
         this.yaPuedeContinuar = true;
 
         const btn =
             this.add.rectangle(
                 640,
-                670,
-                340,
-                58,
+                650,
+                250,
+                40,
                 0x2d82ff,
                 1
             );
@@ -1530,7 +2541,7 @@ export class GrafoDia extends Phaser.Scene {
 
         this.add.text(
             640,
-            670,
+            650,
             'CONTINUAR',
             {
                 fontFamily:
@@ -1551,9 +2562,9 @@ export class GrafoDia extends Phaser.Scene {
         const zone =
             this.add.zone(
                 640,
-                670,
-                340,
-                58
+                650,
+                250,
+                40
             );
 
         zone.setInteractive({
@@ -1632,10 +2643,11 @@ export class GrafoDia extends Phaser.Scene {
             420,
             () => {
 
-                this.scene.start(
-                    'Ventana1',
-                    this.siguienteEstado
-                );
+                this.scene.start('Ventana1', {
+                    ...this.siguienteEstado,
+
+                    diaActual: this.diaActual + 1
+                });
 
             }
         );

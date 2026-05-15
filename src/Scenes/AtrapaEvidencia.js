@@ -920,6 +920,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
         const puntajeActualizado = {
             ...this.puntajeDia,
+            dia: 1, 
             bonusMinijuego: bonus,
             totalBruto: (this.puntajeDia?.totalBruto || 0) + bonus,
             total: (this.puntajeDia?.total || 0) + bonus

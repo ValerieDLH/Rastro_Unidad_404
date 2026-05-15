@@ -1522,6 +1522,7 @@ export class LaberintoDigital extends Phaser.Scene {
 
         const puntajeActualizado = {
             ...puntajeBase,
+            dia: 5,
             bonusMinijuego: bonus,
             totalBruto: (puntajeBase.totalBruto || 0) + bonus,
             total: (puntajeBase.total || 0) + bonus
@@ -1643,6 +1644,8 @@ export class LaberintoDigital extends Phaser.Scene {
                     siguienteEstado: this.siguienteEstado,
                     modoJuego: this.modoJuego,
                     jugadores: this.jugadores,
+                    algoritmoGrafo: 'PRIM',
+                    casosDia: this.casos,
                     resultadoMinijuego: {
                         bonus,
                         encontrados: this.encontrados,

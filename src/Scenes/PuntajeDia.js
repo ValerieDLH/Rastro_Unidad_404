@@ -32,6 +32,10 @@ export class PuntajeDia extends Phaser.Scene {
         this.puntajeDia.vidasRestantes = this.puntajeDia.vidasRestantes || 0;
         this.puntajeDia.total = this.puntajeDia.total || 0;
 
+        this.algoritmoGrafo = data.algoritmoGrafo;
+        console.log("DATA COMPLETA:", data);
+        console.log("ALGORITMO:", this.algoritmoGrafo);
+        
         this.siguienteEstado = data.siguienteEstado || {};
         this.resultadoMinijuego = data.resultadoMinijuego || null;
         this.casosDia = Array.isArray(data.casosDia) ? data.casosDia : [];
@@ -339,18 +343,13 @@ export class PuntajeDia extends Phaser.Scene {
         this.cameras.main.fadeOut(420, 0, 0, 0);
 
         this.time.delayedCall(420, () => {
-            if (this.puntajeDia.dia === 1) {
                 this.scene.start('GrafoDia', {
                     diaActual: this.puntajeDia.dia,
-                    algoritmo: this.algoritmoGrafo || 'BFS',
+                    algoritmo: this.algoritmoGrafo,
                     casosDia: this.casosDia,
                     siguienteEstado: this.siguienteEstado,
                     volumenActual: 0.7
                 });
-                return;
-            }
-
-            this.scene.start('Ventana1', this.siguienteEstado);
         });
     }
 }

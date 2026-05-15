@@ -930,6 +930,7 @@ export class MemoriaPistas extends Phaser.Scene {
 
         const puntajeActualizado = {
             ...puntajeBase,
+            dia: 4,
             bonusMinijuego: bonus,
             totalBruto: (puntajeBase.totalBruto || 0) + bonus,
             total: (puntajeBase.total || 0) + bonus
@@ -1044,6 +1045,8 @@ export class MemoriaPistas extends Phaser.Scene {
                     siguienteEstado: this.siguienteEstado,
                     modoJuego: this.modoJuego,
                     jugadores: this.jugadores,
+                    algoritmoGrafo: 'FLOYD',
+                    casosDia: this.casos,
                     resultadoMinijuego: {
                         bonus,
                         parejas: this.parejasEncontradas,

@@ -1164,6 +1164,7 @@ export class CazaRumores extends Phaser.Scene {
 
         const puntajeActualizado = {
             ...puntajeBase,
+            dia: 3, 
             bonusMinijuego: bonus,
             totalBruto: (puntajeBase.totalBruto || 0) + bonus,
             total: (puntajeBase.total || 0) + bonus
@@ -1282,6 +1283,8 @@ export class CazaRumores extends Phaser.Scene {
                     siguienteEstado: this.siguienteEstado,
                     modoJuego: this.modoJuego,
                     jugadores: this.jugadores,
+                    algoritmoGrafo: 'DIJKSTRA',
+                    casosDia: this.casos,
                     resultadoMinijuego: {
                         bonus: bonus,
                         jugador1: {
