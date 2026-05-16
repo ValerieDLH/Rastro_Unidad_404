@@ -1067,6 +1067,30 @@ export class Ventana1 extends Phaser.Scene {
         };
     }
 
+    obtenerAlgoritmoGrafoPorDia() {
+
+        if (this.diaActual === 1) {
+            return 'BFS_DFS';
+        }
+
+        if (this.diaActual === 2) {
+            return 'DIJKSTRA';
+        }
+
+        if (this.diaActual === 3) {
+            return 'FORD';
+        }
+
+        if (this.diaActual === 4) {
+            return 'PRIM';
+        }
+
+        if (this.diaActual === 5){
+            return 'MASTER'
+        };
+
+    }
+
     _obtenerEstadoSiguienteDespuesDelPuntaje() {
         if (this.diaActual < 6) {
             return {
@@ -1781,12 +1805,34 @@ export class Ventana1 extends Phaser.Scene {
         });
     }
 
+    
+
     _prepararCasosAtrapaEvidencia() {
         const personajes = this.personajesDia || [];
 
+        console.log(
+            "PERSONAJES DIA:",
+            personajes
+        );
+
+        console.log(
+            "CULPABLES:",
+            personajes.filter(
+                pj =>
+                    pj.delito === true
+            ).length
+        );
+
         return personajes
             .filter(pj => pj && pj.delito === true && pj.sancion && pj.sancion !== 'NO TIENE')
-            .slice(0, 3)
+            .slice(
+                0,
+                this.diaActual === 4
+                || this.diaActual === 5
+
+                    ? 5
+                    : 3
+            )
             .map(pj => {
                 const sancionFinal = pj.sancion;
                 const sancionCorta = this._obtenerSancionCorta(sancionFinal);
@@ -2620,32 +2666,21 @@ export class Ventana1 extends Phaser.Scene {
         let algoritmoActual = 'BFS';
 
         if (this.diaActual === 2) {
-            algoritmoActual = 'DFS';
+            algoritmoActual = 'DIJKSTRA';
         }
 
         if (this.diaActual === 3) {
-            algoritmoActual = 'DIJKSTRA'
-        }
-
-        if (this.diaActual === 4){
-            algoritmoActual = 'FLOYD'
-        }
-
-        if (this.diaActual === 5){
-            algoritmoActual = 'PRIM'
-        }
-
-        //test
-
-        if (this.diaActual === 6){
             algoritmoActual = 'FORD'
         }
 
-        const casosDelDia = this._deduplicarPersonajes(
+        if (this.diaActual === 4){
+            algoritmoActual = 'PRIM'
+        }
+
+        const casosDelDia = 
             (this.delitosEncontrados || []).filter(pj => {
                 return pj && pj.dia === this.diaActual;
-            })
-        );
+            });
 
         this.fadeOutMusica(() => {
             this.cameras.main.fadeOut(420, 0, 0, 0);
@@ -2711,13 +2746,9 @@ export class Ventana1 extends Phaser.Scene {
                     puntajeDia,
                     siguienteEstado,
                     modoJuego: this.modoJuego,
-                    jugadores: this.jugadores
-                });
-                this.scene.start('PuntajeDia', {
-                    puntajeDia,
-                    siguienteEstado,
-                    modoJuego: this.modoJuego,
-                    jugadores: this.jugadores
+                    jugadores: this.jugadores,
+                    casosDia: casosDelDia,
+                    algoritmoGrafo: this.obtenerAlgoritmoGrafoPorDia()
                 });
             });
         });

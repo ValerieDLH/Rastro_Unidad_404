@@ -335,21 +335,60 @@ export class PuntajeDia extends Phaser.Scene {
     }
 
     irASiguienteEscena() {
+
         if (this.yaTransicionando) return;
+
         this.yaTransicionando = true;
 
         this._detenerSonidoConteo();
 
-        this.cameras.main.fadeOut(420, 0, 0, 0);
+        this.cameras.main.fadeOut(
+            420,
+            0,
+            0,
+            0
+        );
 
-        this.time.delayedCall(420, () => {
-                this.scene.start('GrafoDia', {
-                    diaActual: this.puntajeDia.dia,
-                    algoritmo: this.algoritmoGrafo,
-                    casosDia: this.casosDia,
-                    siguienteEstado: this.siguienteEstado,
-                    volumenActual: 0.7
-                });
-        });
+        this.time.delayedCall(
+            420,
+
+            () => {
+
+                let algoritmo = 'NINGUNO';
+
+                if (this.puntajeDia.dia === 1) {
+                    algoritmo = 'BFS_DFS';
+                }
+
+                else if (this.puntajeDia.dia === 2) {
+                    algoritmo = 'DIJKSTRA';
+                }
+
+                else if (this.puntajeDia.dia === 3) {
+                    algoritmo = 'FORD';
+                }
+
+                else if (this.puntajeDia.dia === 4) {
+                    algoritmo = 'PRIM';
+                }
+
+                else if (this.puntajeDia.dia === 5){
+                    algoritmo = 'MASTER'
+                }
+
+                this.scene.start(
+                    'GrafoDia',
+                    {
+                        diaActual: this.puntajeDia.dia,
+                        algoritmo: algoritmo,
+                        casosDia: this.casosDia,
+                        siguienteEstado: this.siguienteEstado,
+                        volumenActual: 0.7
+                    }
+                );
+
+            }
+        );
+
     }
 }

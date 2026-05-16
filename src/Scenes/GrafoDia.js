@@ -10,7 +10,7 @@ export class GrafoDia extends Phaser.Scene {
 
         console.log("DIA RECIBIDO:", data.diaActual);
 
-        this.diaActual = data.diaActual;
+        this.diaActual = data.diaActual ;
 
         this.algoritmo = data.algoritmo;
 
@@ -85,6 +85,15 @@ export class GrafoDia extends Phaser.Scene {
         const culpables =
             this._filtrarCulpablesDia();
 
+        console.log(
+            "CULPABLES GRAFODIA:",
+            culpables.length
+        );
+
+        console.log(
+            culpables
+        );    
+
         if (culpables.length === 0) {
 
             this.mostrarSinDatos();
@@ -97,33 +106,48 @@ export class GrafoDia extends Phaser.Scene {
 
         this.dibujarGrafo();
 
-        if(this.algoritmo === 'DFS') {
-            this.animarDFS();
-        } 
+        if (this.algoritmo === 'BFS_DFS') {
+
+            this.animarBFSyDFS();
+
+        }
 
         else if (this.algoritmo === 'DIJKSTRA') {
+
             this.animarDijkstra();
-        }
-        
-        else if (this.algoritmo === 'BFS') {
-            this.animarBFS();
+
         }
 
-        else if (this.algoritmo === 'FLOYD'){
-            console.log("ENTRÓ A FLOYD");
-            this.animarFloyd();
-        }
+        else if (this.algoritmo === 'FORD') {
 
-        else if (this.algoritmo === 'PRIM'){
-            this.animarPrim();
-        }
-
-        else if (this.algoritmo === 'FORD'){
             this.animarFord();
+
+        }
+
+        else if (this.algoritmo === 'PRIM') {
+
+            this.animarPrim();
+
+        }
+
+        else if (this.algoritmo === 'MASTER') {
+
+            this.animarAnalisisFinal();
+
+        }
+
+        else {
+
+            this.txtEstadoDinamico.setText(
+                'No hay algoritmo asignado.'
+            );
+
+            this.mostrarBotonContinuar();
+
         }
 
     }
-
+    
     _normalizarNombre(nombre = '') {
 
         return nombre
@@ -143,11 +167,11 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
-    _obtenerIdNodo(pj) {
+    _obtenerIdNodo(pj, index = 0) {
 
-        return `${pj.dia || this.diaActual}_${pj.rango}_${this._normalizarNombre(
+        return `${this._normalizarNombre(
             pj.nombre || ''
-        )}`;
+        )}_${index}`;
 
     }
 
@@ -172,35 +196,21 @@ export class GrafoDia extends Phaser.Scene {
 
         for (let i = 0; i < 90; i++) {
 
-            const x =
-                Phaser.Math.Between(0, 1280);
-
-            const y =
-                Phaser.Math.Between(0, 720);
+            const x = Phaser.Math.Between(0, 1280);
+            const y = Phaser.Math.Between(0, 720);
 
             const punto = this.add.circle(
                 x,
                 y,
                 Phaser.Math.Between(1, 3),
                 0x7bb8ff,
-                Phaser.Math.FloatBetween(
-                    0.08,
-                    0.30
-                )
+                Phaser.Math.FloatBetween(0.08, 0.30)
             );
 
             this.tweens.add({
                 targets: punto,
-                alpha:
-                    Phaser.Math.FloatBetween(
-                        0.04,
-                        0.16
-                    ),
-                duration:
-                    Phaser.Math.Between(
-                        900,
-                        1700
-                    ),
+                alpha: Phaser.Math.FloatBetween(0.04, 0.16),
+                duration: Phaser.Math.Between(900, 1700),
                 yoyo: true,
                 repeat: -1
             });
@@ -210,9 +220,9 @@ export class GrafoDia extends Phaser.Scene {
         this.panelPrincipal =
             this.add.rectangle(
                 640,
-                420,
-                1180,
-                560,
+                390,
+                1160,
+                500,
                 0x071a3d,
                 0.82
             );
@@ -227,10 +237,26 @@ export class GrafoDia extends Phaser.Scene {
 
     crearTitulo() {
 
+        const tituloAlgoritmo =
+
+            this.algoritmo === 'BFS_DFS'
+
+                ? 'RECORRIDOS BFS Y DFS'
+
+                : this.algoritmo === 'MASTER'
+
+                    ?'ANÁLISIS GLOBAL FINAL'
+
+                    : this.algoritmo === 'NINGUNO'
+
+                        ? 'SIN ALGORITMO'
+
+                        : `RECORRIDO ${this.algoritmo}`;
+
         this.add.text(
             640,
             55,
-            `DÍA ${this.diaActual} - RECORRIDO ${this.algoritmo}`,
+            `DÍA ${this.diaActual} - ${tituloAlgoritmo}`,
             {
                 fontFamily:
                     '"VT323", monospace',
@@ -263,20 +289,32 @@ export class GrafoDia extends Phaser.Scene {
 
     crearPanelAnalisis() {
 
+        const tituloPanel =
+            this.algoritmo === 'BFS_DFS'
+                ? 'ANÁLISIS BFS/DFS'
+                : this.algoritmo === 'MASTER'
+                    ? 'ANÁLISIS GLOBAL'
+                    : `ANÁLISIS ${this.algoritmo}`;
+
+        const subtituloPanel =
+            this.algoritmo === 'DIJKSTRA'
+                ? 'RUTA ÓPTIMA'
+                : this.algoritmo === 'PRIM'
+                    ? 'ÁRBOL MÍNIMO'
+                    : this.algoritmo === 'FORD'
+                        ? 'FLUJO MÁXIMO'
+                        : this.algoritmo === 'MASTER'
+                            ? 'CONCLUSIÓN'
+                            : this.algoritmo === 'BFS_DFS'
+                                ? 'RECORRIDOS'
+                                : 'RECORRIDO';
+
         this.panelAnalisis =
             this.add.rectangle(
-                235,
-
-                this.algoritmo === 'PRIM'
-                    ? 430 
-                    :395, 
-
+                255,
+                385,
                 360,
-
-                this.algoritmo === 'PRIM'
-                    ? 520
-                    : 470,
-
+                455,
                 0x041127,
                 0.96
             );
@@ -290,124 +328,73 @@ export class GrafoDia extends Phaser.Scene {
         this.panelAnalisis.setDepth(20);
 
         this.add.text(
-            70,
-            200,
-            `ANÁLISIS ${this.algoritmo}`,
+            90,
+            175,
+            tituloPanel,
             {
-                fontFamily:
-                    '"VT323", monospace',
-
-                fontSize: '38px',
-
+                fontFamily: '"VT323", monospace',
+                fontSize: '34px',
                 color: '#8dff9c'
             }
         ).setDepth(21);
 
         this.txtEstadisticas =
             this.add.text(
-                70,
-                240,
+                90,
+                220,
                 '',
                 {
-                    fontFamily:
-                        '"VT323", monospace',
-
-                    fontSize: '22px',
-
+                    fontFamily: '"VT323", monospace',
+                    fontSize: '20px',
                     color: '#dcecff',
-
-                    lineSpacing: 18
+                    lineSpacing: 12,
+                    wordWrap: {
+                        width: 250
+                    }
                 }
             );
 
         this.txtEstadisticas.setDepth(21);
 
         this.add.rectangle(
-
-            235,
-
-            this.algoritmo === 'PRIM'
-                ? 430
-                : 505,
-
+            255,
+            405,
             260,
-
             2,
-
             0x2d6dcc,
-
             0.8
-
         ).setDepth(21);
 
         this.add.text(
-            70,
-
-            this.algoritmo === 'PRIM'
-                ? 455
-                : 535,
-
-            this.algoritmo === 'DFS'
-
-                ? 'RECORRIDO DFS'
-
-                : this.algoritmo === 'DIJKSTRA'
-
-                    ? 'RUTA ÓPTIMA'
-
-                    : this.algoritmo === 'FLOYD'
-
-                        ? 'RUTAS MÍNIMAS'
-
-                        : this.algoritmo === 'PRIM'
-
-                            ? 'ÁRBOL MÍNIMO'
-
-                            : this.algoritmo === 'FORD'
-
-                                ? 'FLUJO MÁXIMO'
-
-                                : 'RECORRIDO BFS',   
+            90,
+            430,
+            subtituloPanel,
             {
-                fontFamily:
-                    '"VT323", monospace',
-
-                fontSize: '34px',
-
+                fontFamily: '"VT323", monospace',
+                fontSize: '30px',
                 color: '#8dff9c'
             }
         ).setDepth(21);
 
         this.txtRecorrido =
             this.add.text(
-                70,
-
-            this.algoritmo === 'PRIM'
-                ? 505
-                : 585,
-
+                90,
+                468,
                 '',
-
                 {
-                    fontFamily:
-                        '"VT323", monospace',
-
-                    fontSize: '22px',
-
+                    fontFamily: '"VT323", monospace',
+                    fontSize: '18px',
                     color: '#ffffff',
-
                     wordWrap: {
-                        width: 240
+                        width: 250
                     },
-
-                    lineSpacing: 12
+                    lineSpacing: 8
                 }
             );
 
         this.txtRecorrido.setDepth(21);
 
     }
-
     crearTextoEstado() {
 
         this.txtEstadoDinamico =
@@ -440,31 +427,32 @@ export class GrafoDia extends Phaser.Scene {
     crearGrafo(culpables) {
 
         this.nodos = [];
-
+        console.log(
+            "ENTRANDO A CREAR GRAFO:",
+            culpables.length
+        );
         this.aristas = [];
-
         this.adyacencia = {};
 
-        const centroX = 860;
+        const centroX = 875;
+        const centroY = 435;
 
-        const centroY = 450;
-
-        let radio = 170;
+        let radio = 145;
 
         if (culpables.length >= 5) {
-            radio = 145;
+            radio = 125;
         }
 
         if (culpables.length >= 7) {
-            radio = 120;
+            radio = 105;
         }
 
         this.panelGrafo =
             this.add.rectangle(
-                860,
-                430,
+                875,
+                370,
                 560,
-                500,
+                390,
                 0x041127,
                 0.55
             );
@@ -480,80 +468,39 @@ export class GrafoDia extends Phaser.Scene {
         culpables.forEach((caso, index) => {
 
             const angulo =
-                (Math.PI * 2 * index)
-                / culpables.length
+                (Math.PI * 2 * index) / culpables.length
                 - Math.PI / 2;
 
             const nodo = {
-
-                id:
-                    this._obtenerIdNodo(
-                        caso
-                    ),
-
-                nombre:
-                    caso.nombre,
-
+                id: this._obtenerIdNodo(caso,index),
+                nombre: caso.nombre,
                 caso,
-
-                x:
-                    centroX
-                    + Math.cos(
-                        angulo
-                    ) * radio,
-
-                y:
-                    centroY
-                    + Math.sin(
-                        angulo
-                    ) * radio,
-
+                x: centroX + Math.cos(angulo) * radio,
+                y: centroY + Math.sin(angulo) * radio,
                 visitado: false
-
             };
 
             this.nodos.push(nodo);
-
-            this.adyacencia[
-                nodo.id
-            ] = [];
+            this.adyacencia[nodo.id] = [];
 
         });
 
-        for (
-            let i = 0;
-            i < this.nodos.length;
-            i++
-        ) {
+        for (let i = 0; i < this.nodos.length; i++) {
 
-            for (
-                let j = i + 1;
-                j < this.nodos.length;
-                j++
-            ) {
+            for (let j = i + 1; j < this.nodos.length; j++) {
 
-                const a =
-                    this.nodos[i];
-
-                const b =
-                    this.nodos[j];
+                const a = this.nodos[i];
+                const b = this.nodos[j];
 
                 const tiposConexion = [
-
                     'Difusión de rumores',
-
                     'Ataques coordinados',
-
                     'Misma evidencia digital',
-
                     'Patrón de acoso',
-
                     'Manipulación de información'
-
                 ];
 
                 const conexionRandom =
-
                     tiposConexion[
                         Phaser.Math.Between(
                             0,
@@ -561,44 +508,36 @@ export class GrafoDia extends Phaser.Scene {
                         )
                     ];
 
-                const peso =
-                    Phaser.Math.Between(1, 10);
+                const peso = Phaser.Math.Between(1, 10);
 
                 const arista = {
-
                     from: a.id,
-
                     to: b.id,
-
                     nodoA: a,
-
                     nodoB: b,
-
                     tipo: conexionRandom,
-
                     peso: peso,
-
                     graphics: null,
-
                     textoPeso: null
-
                 };
 
-                this.aristas.push(
-                    arista
-                );
+                this.aristas.push(arista);
 
-                this.adyacencia[
-                    a.id
-                ].push(b.id);
-
-                this.adyacencia[
-                    b.id
-                ].push(a.id);
+                this.adyacencia[a.id].push(b.id);
+                this.adyacencia[b.id].push(a.id);
 
             }
 
         }
+
+        console.log(
+            "NODOS CREADOS:",
+            this.nodos.length
+        );
+
+        console.log(
+            this.nodos
+        );
 
     }
 
@@ -1214,378 +1153,6 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
-    obtenerFloydWarshall() {
-
-        const n = this.nodos.length;
-
-        const dist = [];
-
-        for (let i = 0; i < n; i++) {
-
-            dist[i] = [];
-
-            for (let j = 0; j < n; j++) {
-
-                if (i === j) {
-
-                    dist[i][j] = 0;
-
-                }
-
-                else {
-
-                    dist[i][j] = Infinity;
-
-                }
-
-            }
-
-        }
-
-        this.aristas.forEach(arista => {
-
-            const i = this.nodos.findIndex(
-                n => n.id === arista.from
-            );
-
-            const j = this.nodos.findIndex(
-                n => n.id === arista.to
-            );
-
-            if (i >= 0 && j >= 0) {
-
-                dist[i][j] = arista.peso;
-
-                dist[j][i] = arista.peso;
-
-            }
-
-        });
-
-        for (let k = 0; k < n; k++) {
-
-            for (let i = 0; i < n; i++) {
-
-                for (let j = 0; j < n; j++) {
-
-                    if (
-
-                        dist[i][k] !== Infinity
-
-                        &&
-
-                        dist[k][j] !== Infinity
-
-                        &&
-
-                        dist[i][k] + dist[k][j]
-                        < dist[i][j]
-
-                    ) {
-
-                        dist[i][j] =
-                            dist[i][k]
-                            + dist[k][j];
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        return {
-            dist
-        };
-
-    }
-
-    animarFloyd() {
-
-        const resultado =
-            this.obtenerFloydWarshall();
-
-        const n =
-            this.nodos.length;
-
-        if (n < 2) {
-
-            this.txtEstadoDinamico.setText(
-                'No hay suficientes nodos para aplicar Floyd-Warshall.'
-            );
-
-            this.mostrarBotonContinuar();
-
-            return;
-
-        }
-
-        let mejorCosto = Infinity;
-
-        let mejorI = 0;
-
-        let mejorJ = 0;
-
-        for (let i = 0; i < n; i++) {
-
-            for (let j = 0; j < n; j++) {
-
-                if (
-
-                    i !== j
-
-                    &&
-
-                    resultado.dist[i][j] < mejorCosto
-
-                ) {
-
-                    mejorCosto =
-                        resultado.dist[i][j];
-
-                    mejorI = i;
-
-                    mejorJ = j;
-
-                }
-
-            }
-
-        }
-
-        const rutaIndices = [
-            mejorI,
-            mejorJ
-        ];
-
-        const rutaIds =
-            rutaIndices.map(
-                index => this.nodos[index].id
-            );
-
-        let nombresRuta = [];
-
-        rutaIds.forEach((idNodo, index) => {
-
-            this.time.delayedCall(
-
-                900 + index * 1300,
-
-                () => {
-
-                    const nodo =
-                        this.nodos.find(
-                            n => n.id === idNodo
-                        );
-
-                    if (!nodo) return;
-
-                    nombresRuta.push(
-                        nodo.nombre
-                    );
-
-                    nodo.halo.setFillStyle(
-                        0x9333ea,
-                        1
-                    );
-
-                    nodo.halo.setStrokeStyle(
-                        5,
-                        0xe9d5ff,
-                        1
-                    );
-
-                    this.tweens.add({
-
-                        targets:
-                            nodo.container,
-
-                        scaleX: 1.16,
-
-                        scaleY: 1.16,
-
-                        duration: 280,
-
-                        yoyo: true
-
-                    });
-
-                    if (index > 0) {
-
-                        const anterior =
-                            rutaIds[index - 1];
-
-                        this.resaltarRutaFloyd(
-                            anterior,
-                            idNodo
-                        );
-
-                    }
-
-                    this.txtRecorrido.setText(
-                        nombresRuta.join(' → ')
-                    );
-
-                    this.txtEstadoDinamico.setText(
-                        `Analizando rutas globales...\n${nodo.nombre}`
-                    );
-
-                }
-
-            );
-
-        });
-
-        this.time.delayedCall(
-
-            1500 + rutaIds.length * 1300,
-
-            () => {
-
-                this.mostrarConclusionFloyd(
-                    resultado,
-                    rutaIds
-                );
-
-            }
-
-        );
-
-    }
-
-    resaltarRutaFloyd(idA, idB) {
-
-        this.aristas.forEach(arista => {
-
-            const coincide =
-
-                (
-                    arista.from === idA
-                    && arista.to === idB
-                )
-
-                ||
-
-                (
-                    arista.from === idB
-                    && arista.to === idA
-                );
-
-            if (coincide) {
-
-                arista.graphics.clear();
-
-                arista.graphics.lineStyle(
-                    7,
-                    0xe9d5ff,
-                    1
-                );
-
-                arista.graphics.beginPath();
-
-                arista.graphics.moveTo(
-                    arista.nodoA.x,
-                    arista.nodoA.y
-                );
-
-                arista.graphics.lineTo(
-                    arista.nodoB.x,
-                    arista.nodoB.y
-                );
-
-                arista.graphics.strokePath();
-
-                if (arista.textoPeso) {
-
-                    arista.textoPeso.setColor(
-                        '#e9d5ff'
-                    );
-
-                    arista.textoPeso.setFontSize(
-                        '28px'
-                    );
-
-                }
-
-            }
-
-        });
-
-    }
-
-    mostrarConclusionFloyd(resultado, rutaIds) {
-
-        let mejorCosto = Infinity;
-
-        resultado.dist.forEach(fila => {
-
-            fila.forEach(valor => {
-
-                if (
-
-                    valor !== 0
-
-                    &&
-
-                    valor < mejorCosto
-
-                ) {
-
-                    mejorCosto = valor;
-
-                }
-
-            });
-
-        });
-
-        const paresAnalizados =
-            this.nodos.length
-            * this.nodos.length;
-
-        this.txtEstadisticas.setText(
-
-            `Nodos evaluados: ${this.nodos.length}\n`
-
-            + `Pares analizados:${paresAnalizados}\n`
-
-            + `Costo mínimo:${mejorCosto}\n`
-
-            + `Análisis global completado`
-
-        );
-
-        const nombresRuta =
-            rutaIds.map(idNodo => {
-
-                const nodo =
-                    this.nodos.find(
-                        n => n.id === idNodo
-                    );
-
-                return nodo
-                    ? nodo.nombre
-                    : '';
-
-            }).filter(
-                nombre => nombre !== ''
-            );
-
-        this.txtRecorrido.setText(
-
-            nombresRuta.join(' → ')
-
-        );
-
-        this.txtEstadoDinamico.setText(
-            'Floyd-Warshall completado.'
-        );
-
-        this.mostrarBotonContinuar();
-
-    }
-
     obtenerPrim() {
 
         if (!this.nodos || this.nodos.length === 0) {
@@ -1858,7 +1425,7 @@ export class GrafoDia extends Phaser.Scene {
 
             + `Aristas usadas: ${resultado.aristas.length}\n`
 
-            + `Costo total: ${resultado.costoTotal}`
+            + `Costo total: ${resultado.costoTotal}\n`
 
             + `Árbol mínimo generado`
 
@@ -2149,11 +1716,11 @@ export class GrafoDia extends Phaser.Scene {
 
         this.txtEstadisticas.setText(
 
-            `Nodos analizados: ${this.nodos.length}`
+            `Nodos analizados: ${this.nodos.length}\n`
 
             + `Caminos aumentantes:\n${resultado.caminos.length}\n`
 
-            + `Flujo máximo:\n${resultado.flujoMaximo}`
+            + `Flujo máximo:\n${resultado.flujoMaximo}\n`
 
             + `Capacidad máxima detectada`
 
@@ -2418,6 +1985,328 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
+    animarBFSyDFS() {
+
+        const ordenBFS = this.obtenerOrdenBFS();
+
+        const ordenDFS = this.obtenerOrdenDFS();
+
+        let nombresBFS = [];
+
+        let nombresDFS = [];
+
+        this.txtEstadisticas.setText(
+            `Día 1: comparación de recorridos\n\n`
+            + `Primero se ejecuta BFS\n`
+            + `Luego se ejecuta DFS`
+        );
+
+        this.txtRecorrido.setText(
+            'BFS:\n\nDFS:'
+        );
+
+        ordenBFS.forEach((paso, index) => {
+
+            this.time.delayedCall(
+                900 + index * 1000,
+
+                () => {
+
+                    const nodo = this.nodos.find(
+                        n => n.id === paso.id
+                    );
+
+                    if (!nodo) return;
+
+                    nombresBFS.push(nodo.nombre);
+
+                    nodo.halo.setFillStyle(
+                        0x2f8f46,
+                        1
+                    );
+
+                    nodo.halo.setStrokeStyle(
+                        5,
+                        0x8dff9c,
+                        1
+                    );
+
+                    this.tweens.add({
+                        targets: nodo.container,
+                        scaleX: 1.15,
+                        scaleY: 1.15,
+                        duration: 280,
+                        yoyo: true
+                    });
+
+                    this.resaltarAristasDeNodo(paso.id);
+
+                    this.txtRecorrido.setText(
+                        `BFS:\n${nombresBFS.join(' → ')}\n\nDFS:`
+                    );
+
+                    this.txtEstadoDinamico.setText(
+                        `Ejecutando BFS...\n${nodo.nombre}`
+                    );
+
+                }
+            );
+
+        });
+
+        const inicioDFS =
+            1400 + ordenBFS.length * 1000;
+
+        ordenDFS.forEach((paso, index) => {
+
+            this.time.delayedCall(
+                inicioDFS + index * 1000,
+
+                () => {
+
+                    const nodo = this.nodos.find(
+                        n => n.id === paso.id
+                    );
+
+                    if (!nodo) return;
+
+                    nombresDFS.push(nodo.nombre);
+
+                    nodo.halo.setFillStyle(
+                        0xff7b39,
+                        1
+                    );
+
+                    nodo.halo.setStrokeStyle(
+                        5,
+                        0xffc266,
+                        1
+                    );
+
+                    this.tweens.add({
+                        targets: nodo.container,
+                        scaleX: 1.15,
+                        scaleY: 1.15,
+                        duration: 280,
+                        yoyo: true
+                    });
+
+                    this.resaltarAristasDeNodo(paso.id);
+
+                    this.txtRecorrido.setText(
+                        `BFS:\n${nombresBFS.join(' → ')}\n\n`
+                        + `DFS:\n${nombresDFS.join(' → ')}`
+                    );
+
+                    this.txtEstadoDinamico.setText(
+                        `Ejecutando DFS...\n${nodo.nombre}`
+                    );
+
+                }
+            );
+
+        });
+
+        this.time.delayedCall(
+            inicioDFS + ordenDFS.length * 1000 + 500,
+
+            () => {
+
+                const nivelesBFS = Math.max(
+                    ...ordenBFS.map(p => p.nivel)
+                );
+
+                const profundidadDFS = Math.max(
+                    ...ordenDFS.map(p => p.nivel)
+                );
+
+                this.txtEstadisticas.setText(
+                    `Casos analizados: ${this.nodos.length}\n`
+                    + `Conexiones: ${this.aristas.length}\n`
+                    + `Niveles BFS: ${nivelesBFS}\n`
+                    + `Profundidad DFS: ${profundidadDFS}\n`
+                    + `Comparación completada`
+                );
+
+                this.txtEstadoDinamico.setText(
+                    'BFS y DFS completados.'
+                );
+
+                this.mostrarBotonContinuar();
+
+            }
+        );
+
+    }
+
+    animarAnalisisFinal() {
+
+        const bfs =
+            this.obtenerOrdenBFS();
+
+        const dfs =
+            this.obtenerOrdenDFS();
+
+        const dijkstra =
+            this.obtenerRutaDijkstra();
+
+        const ford =
+            this.obtenerFordFulkerson();
+
+        const prim =
+            this.obtenerPrim();
+
+        const contador = {};
+
+        this.nodos.forEach(nodo => {
+
+            contador[nodo.id] = 0;
+
+        });
+
+        bfs.forEach(n => {
+
+            contador[n.id]++;
+
+        });
+
+        dfs.forEach(n => {
+
+            contador[n.id]++;
+
+        });
+
+        dijkstra.ruta.forEach(id => {
+
+            contador[id]++;
+
+        });
+
+        prim.aristas.forEach(a => {
+
+            contador[a.from]++;
+
+            contador[a.to]++;
+
+        });
+
+        let ultimateId = null;
+
+        let maximo = -1;
+
+        Object.keys(contador).forEach(id => {
+
+            if (contador[id] > maximo) {
+
+                maximo = contador[id];
+
+                ultimateId = id;
+
+            }
+
+        });
+
+        const nodoUltimate =
+            this.nodos.find(
+                n => n.id === ultimateId
+            );
+
+        this.ultimateCulpable =
+            nodoUltimate;
+
+        this.txtEstadisticas.setText(
+
+            `BFS: ${bfs.length} nodos\n`
+
+            + `DFS: ${dfs.length} nodos\n`
+
+            + `Dijkstra: ${dijkstra.costoTotal}\n`
+
+            + `Ford: ${ford.flujoMaximo}\n`
+
+            + `Prim: ${prim.costoTotal}\n`
+
+            + `ULTIMATE: ${nodoUltimate.nombre}`
+
+        );
+
+        this.txtRecorrido.setText(
+
+            `BFS:\n`
+
+            + bfs.map(n => {
+
+                const nodo =
+                    this.nodos.find(
+                        x => x.id === n.id
+                    );
+
+                return nodo.nombre;
+
+            }).join(' → ')
+
+            + `\n\nDFS:\n`
+
+            + dfs.map(n => {
+
+                const nodo =
+                    this.nodos.find(
+                        x => x.id === n.id
+                    );
+
+                return nodo.nombre;
+
+            }).join(' → ')
+
+        );
+
+        this.nodos.forEach(nodo => {
+
+            nodo.halo.setFillStyle(
+                0x284a7a,
+                1
+            );
+
+        });
+
+        nodoUltimate.halo.setFillStyle(
+            0xff0000,
+            1
+        );
+
+        nodoUltimate.halo.setStrokeStyle(
+            8,
+            0xffe082,
+            1
+        );
+
+        this.tweens.add({
+
+            targets:
+                nodoUltimate.container,
+
+            scaleX: 1.25,
+
+            scaleY: 1.25,
+
+            duration: 700,
+
+            yoyo: true,
+
+            repeat: -1
+
+        });
+
+        this.txtEstadoDinamico.setText(
+            'Análisis global completado.'
+        );
+
+        this.crearBotonConclusiones();
+
+        this.mostrarBotonContinuar();
+
+    }
+
     mostrarConclusionBFS(orden) {
 
         const niveles =
@@ -2524,7 +2413,7 @@ export class GrafoDia extends Phaser.Scene {
         const btn =
             this.add.rectangle(
                 640,
-                650,
+                625,
                 250,
                 40,
                 0x2d82ff,
@@ -2541,18 +2430,13 @@ export class GrafoDia extends Phaser.Scene {
 
         this.add.text(
             640,
-            650,
+            625,
             'CONTINUAR',
             {
-                fontFamily:
-                    '"VT323", monospace',
-
+                fontFamily: '"VT323", monospace',
                 fontSize: '36px',
-
                 color: '#ffffff',
-
                 stroke: '#071021',
-
                 strokeThickness: 4
             }
         )
@@ -2562,7 +2446,7 @@ export class GrafoDia extends Phaser.Scene {
         const zone =
             this.add.zone(
                 640,
-                650,
+                625,
                 250,
                 40
             );
@@ -2573,35 +2457,220 @@ export class GrafoDia extends Phaser.Scene {
 
         zone.setDepth(102);
 
-        zone.on(
-            'pointerover',
-            () => {
+        zone.on('pointerover', () => {
+            btn.setFillStyle(0x4b9bff, 1);
+        });
 
-                btn.setFillStyle(
-                    0x4b9bff,
-                    1
-                );
+        zone.on('pointerout', () => {
+            btn.setFillStyle(0x2d82ff, 1);
+        });
 
-            }
+        zone.on('pointerdown', () => {
+            this.irASiguienteDia();
+        });
+
+    }
+    
+    crearBotonConclusiones() {
+
+        const btn =
+
+            this.add.rectangle(
+                1010,
+                650,
+                260,
+                42,
+                0xffc107,
+                1
+            );
+
+        btn.setStrokeStyle(
+            3,
+            0xffffff,
+            1
         );
 
-        zone.on(
-            'pointerout',
-            () => {
+        btn.setDepth(100);
 
-                btn.setFillStyle(
-                    0x2d82ff,
-                    1
-                );
+        const txt =
 
-            }
-        );
+            this.add.text(
+                1010,
+                650,
+                'CONCLUSIONES',
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '34px',
+
+                    color: '#000000'
+                }
+            );
+
+        txt.setOrigin(0.5);
+
+        txt.setDepth(101);
+
+        const zone =
+
+            this.add.zone(
+                1010,
+                650,
+                260,
+                42
+            );
+
+        zone.setInteractive({
+            cursor: 'pointer'
+        });
+
+        zone.setDepth(102);
 
         zone.on(
             'pointerdown',
             () => {
 
-                this.irASiguienteDia();
+                this.abrirModalConclusiones();
+
+            }
+        );
+
+    }
+
+    abrirModalConclusiones() {
+
+        const fondo =
+
+            this.add.rectangle(
+                640,
+                360,
+                1280,
+                720,
+                0x000000,
+                0.65
+            );
+
+        fondo.setDepth(200);
+
+        const panel =
+
+            this.add.rectangle(
+                640,
+                360,
+                780,
+                520,
+                0x071a3d,
+                0.98
+            );
+
+        panel.setStrokeStyle(
+            4,
+            0x7bb8ff,
+            1
+        );
+
+        panel.setDepth(201);
+
+        const titulo =
+
+            this.add.text(
+                640,
+                130,
+                'CONCLUSIONES FINALES',
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '48px',
+
+                    color: '#ffffff'
+                }
+            );
+
+        titulo.setOrigin(0.5);
+
+        titulo.setDepth(202);
+
+        const texto =
+
+            this.add.text(
+
+                640,
+                340,
+
+                `ULTIMATE CULPABLE:\n\n`
+
+                + `${this.ultimateCulpable.nombre}\n\n`
+
+                + `• BFS expandió conexiones\n`
+
+                + `• DFS encontró profundidad\n`
+
+                + `• Dijkstra detectó rutas mínimas\n`
+
+                + `• Ford detectó flujo dominante\n`
+
+                + `• Prim conectó la estructura\n\n`
+
+                + `Todos los algoritmos apuntan\n`
+
+                + `a ${this.ultimateCulpable.nombre}`,
+
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '30px',
+
+                    color: '#dcecff',
+
+                    align: 'center'
+                }
+
+            );
+
+        texto.setOrigin(0.5);
+
+        texto.setDepth(202);
+
+        const cerrar =
+
+            this.add.text(
+                640,
+                560,
+                'CERRAR',
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '36px',
+
+                    color: '#ffcc66'
+                }
+            );
+
+        cerrar.setOrigin(0.5);
+
+        cerrar.setDepth(202);
+
+        cerrar.setInteractive({
+            cursor: 'pointer'
+        });
+
+        cerrar.on(
+            'pointerdown',
+            () => {
+
+                fondo.destroy();
+
+                panel.destroy();
+
+                titulo.destroy();
+
+                texto.destroy();
+
+                cerrar.destroy();
 
             }
         );
@@ -2643,11 +2712,15 @@ export class GrafoDia extends Phaser.Scene {
             420,
             () => {
 
-                this.scene.start('Ventana1', {
-                    ...this.siguienteEstado,
+                this.scene.start(
+                    'Ventana1',
+                    {
+                        ...this.siguienteEstado,
 
-                    diaActual: this.diaActual + 1
-                });
+                        diaActual:
+                            this.diaActual + 1
+                    }
+                );
 
             }
         );
