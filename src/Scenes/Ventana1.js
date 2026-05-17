@@ -1087,7 +1087,7 @@ export class Ventana1 extends Phaser.Scene {
 
         if (this.diaActual === 5){
             return 'MASTER'
-        };
+        }
 
     }
 

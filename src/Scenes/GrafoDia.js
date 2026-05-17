@@ -29,6 +29,16 @@ export class GrafoDia extends Phaser.Scene {
         this.aristasVisuales = [];
         this.adyacencia = {};
 
+        this.grafoMaestro = [];
+
+        this.aristasMaestras = [];
+
+        this.nodosActivos = [];
+
+        this.aristasActivas = [];
+
+        this.nodoValeria = null;
+
         this.yaPuedeContinuar = false;
 
     }
@@ -82,17 +92,21 @@ export class GrafoDia extends Phaser.Scene {
 
         this.crearTextoEstado();
 
+        const visibles =
+        desbloqueoPorDia[this.diaActual] || [];
+
         const culpables =
-            this._filtrarCulpablesDia();
+            implicadosTotales.filter(
+                pj =>
+                    visibles.includes(
+                        pj.nombre
+                    )
+            );
 
         console.log(
             "CULPABLES GRAFODIA:",
             culpables.length
         );
-
-        console.log(
-            culpables
-        );    
 
         if (culpables.length === 0) {
 
@@ -101,10 +115,13 @@ export class GrafoDia extends Phaser.Scene {
             return;
 
         }
-
         this.crearGrafo(culpables);
 
         this.dibujarGrafo();
+
+        this.ocultarGrafoPrincipal();
+
+        this.crearBotonVerGrafo();
 
         if (this.algoritmo === 'BFS_DFS') {
 
@@ -221,8 +238,8 @@ export class GrafoDia extends Phaser.Scene {
             this.add.rectangle(
                 640,
                 390,
-                1160,
-                500,
+                900,
+                560,
                 0x071a3d,
                 0.82
             );
@@ -231,6 +248,139 @@ export class GrafoDia extends Phaser.Scene {
             3,
             0x5ea2ff,
             0.85
+        );
+
+    }
+
+    crearBotonVerGrafo() {
+
+        const btn =
+            this.add.rectangle(
+                1120,
+                360,
+                170,
+                170,
+                0x2563eb,
+                1
+            );
+
+        btn.setStrokeStyle(
+            4,
+            0xffffff,
+            1
+        );
+
+        btn.setDepth(90);
+
+        const icono =
+            this.add.text(
+                1080,
+                320,
+                '◉',
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '72px',
+
+                    color: '#ffffff'
+                }
+            );
+
+        icono.setOrigin(0.5);
+
+        icono.setDepth(91);
+
+        const txt =
+            this.add.text(
+                1080,
+                390,
+                'VER\nGRAFO',
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '30px',
+
+                    align: 'center',
+
+                    color: '#ffffff'
+                }
+            );
+
+        txt.setOrigin(0.5);
+
+        txt.setDepth(91);
+
+        const zone =
+            this.add.zone(
+                1080,
+                360,
+                170,
+                170
+            );
+
+        zone.setInteractive({
+            cursor: 'pointer'
+        });
+
+        zone.setDepth(92);
+
+        zone.on(
+            'pointerover',
+            () => {
+
+                btn.setFillStyle(
+                    0x3b82f6,
+                    1
+                );
+
+                this.tweens.add({
+
+                    targets: btn,
+
+                    scaleX: 1.05,
+
+                    scaleY: 1.05,
+
+                    duration: 150
+
+                });
+
+            }
+        );
+
+        zone.on(
+            'pointerout',
+            () => {
+
+                btn.setFillStyle(
+                    0x2563eb,
+                    1
+                );
+
+                this.tweens.add({
+
+                    targets: btn,
+
+                    scaleX: 1,
+
+                    scaleY: 1,
+
+                    duration: 150
+
+                });
+
+            }
+        );
+
+        zone.on(
+            'pointerdown',
+            () => {
+
+                this.abrirModalGrafo();
+
+            }
         );
 
     }
@@ -273,7 +423,7 @@ export class GrafoDia extends Phaser.Scene {
 
         this.add.text(
             640,
-            100,
+            85,
             'Conexión entre los casos culpables encontrados',
             {
                 fontFamily:
@@ -311,10 +461,10 @@ export class GrafoDia extends Phaser.Scene {
 
         this.panelAnalisis =
             this.add.rectangle(
-                255,
-                385,
-                360,
-                455,
+                640,
+                375,
+                760,
+                470,
                 0x041127,
                 0.96
             );
@@ -328,8 +478,8 @@ export class GrafoDia extends Phaser.Scene {
         this.panelAnalisis.setDepth(20);
 
         this.add.text(
-            90,
-            175,
+            640,
+            155,
             tituloPanel,
             {
                 fontFamily: '"VT323", monospace',
@@ -340,7 +490,7 @@ export class GrafoDia extends Phaser.Scene {
 
         this.txtEstadisticas =
             this.add.text(
-                90,
+                330,
                 220,
                 '',
                 {
@@ -349,7 +499,7 @@ export class GrafoDia extends Phaser.Scene {
                     color: '#dcecff',
                     lineSpacing: 12,
                     wordWrap: {
-                        width: 250
+                        width: 620
                     }
                 }
             );
@@ -357,17 +507,17 @@ export class GrafoDia extends Phaser.Scene {
         this.txtEstadisticas.setDepth(21);
 
         this.add.rectangle(
-            255,
-            405,
-            260,
+            640,
+            385,
+            600,
             2,
             0x2d6dcc,
             0.8
         ).setDepth(21);
 
         this.add.text(
-            90,
-            430,
+            640,
+            420,
             subtituloPanel,
             {
                 fontFamily: '"VT323", monospace',
@@ -378,15 +528,15 @@ export class GrafoDia extends Phaser.Scene {
 
         this.txtRecorrido =
             this.add.text(
-                90,
-                468,
+                330,
+                470,
                 '',
                 {
                     fontFamily: '"VT323", monospace',
                     fontSize: '18px',
                     color: '#ffffff',
                     wordWrap: {
-                        width: 250
+                        width: 620
                     },
                     lineSpacing: 8
                 }
@@ -436,48 +586,63 @@ export class GrafoDia extends Phaser.Scene {
 
         const centroX = 875;
         const centroY = 435;
-
-        let radio = 145;
+        
+        let radio = 160;
 
         if (culpables.length >= 5) {
-            radio = 125;
+            radio = 185;
         }
 
-        if (culpables.length >= 7) {
-            radio = 105;
+        if (culpables.length >= 8) {
+            radio = 220;
         }
 
-        this.panelGrafo =
-            this.add.rectangle(
-                875,
-                370,
-                560,
-                390,
-                0x041127,
-                0.55
-            );
+        if (culpables.length >= 12) {
+            radio = 250;
+        }
 
-        this.panelGrafo.setStrokeStyle(
-            2,
-            0x194b8f,
-            0.8
-        );
+        if (culpables.length >= 16) {
+            radio = 290;
+        }
 
-        this.panelGrafo.setDepth(4);
+        const nodosVisuales = [
 
-        culpables.forEach((caso, index) => {
+            ...culpables,
 
-            const angulo =
-                (Math.PI * 2 * index) / culpables.length
+            {
+                nombre: 'Valeria',
+                esVictima: true
+            }
+
+        ];
+
+        nodosVisuales.forEach((caso, index) => {
+           const angulo =
+                (Math.PI * 2 * index)
+                / nodosVisuales.length
                 - Math.PI / 2;
 
             const nodo = {
+
                 id: this._obtenerIdNodo(caso,index),
+
                 nombre: caso.nombre,
+
                 caso,
-                x: centroX + Math.cos(angulo) * radio,
-                y: centroY + Math.sin(angulo) * radio,
+
+                esVictima:
+                    caso.esVictima === true,
+
+                x:
+                    centroX
+                    + Math.cos(angulo) * radio,
+
+                y:
+                    centroY
+                    + Math.sin(angulo) * radio,
+
                 visitado: false
+
             };
 
             this.nodos.push(nodo);
@@ -485,50 +650,71 @@ export class GrafoDia extends Phaser.Scene {
 
         });
 
-        for (let i = 0; i < this.nodos.length; i++) {
+        
+        conexionesMaestras.forEach(conexion => {
 
-            for (let j = i + 1; j < this.nodos.length; j++) {
+            const nombreA =
+                this._normalizarNombre(
+                    conexion[0]
+                );
 
-                const a = this.nodos[i];
-                const b = this.nodos[j];
+            const nombreB =
+                this._normalizarNombre(
+                    conexion[1]
+                );
 
-                const tiposConexion = [
-                    'Difusión de rumores',
-                    'Ataques coordinados',
-                    'Misma evidencia digital',
-                    'Patrón de acoso',
-                    'Manipulación de información'
-                ];
+            const nodoA =
+                this.nodos.find(
+                    n =>
+                        this._normalizarNombre(
+                            n.nombre
+                        ) === nombreA
+                );
 
-                const conexionRandom =
-                    tiposConexion[
-                        Phaser.Math.Between(
-                            0,
-                            tiposConexion.length - 1
-                        )
-                    ];
+            const nodoB =
+                this.nodos.find(
+                    n =>
+                        this._normalizarNombre(
+                            n.nombre
+                        ) === nombreB
+                );
 
-                const peso = Phaser.Math.Between(1, 10);
+            if (!nodoA || !nodoB) return;
 
-                const arista = {
-                    from: a.id,
-                    to: b.id,
-                    nodoA: a,
-                    nodoB: b,
-                    tipo: conexionRandom,
-                    peso: peso,
-                    graphics: null,
-                    textoPeso: null
-                };
+            const peso =
+                Phaser.Math.Between(1, 10);
 
-                this.aristas.push(arista);
+            const arista = {
 
-                this.adyacencia[a.id].push(b.id);
-                this.adyacencia[b.id].push(a.id);
+                from: nodoA.id,
 
-            }
+                to: nodoB.id,
 
-        }
+                nodoA,
+
+                nodoB,
+
+                tipo: 'Conexión del caso',
+
+                peso,
+
+                graphics: null,
+
+                textoPeso: null
+
+            };
+
+            this.aristas.push(arista);
+
+            this.adyacencia[nodoA.id].push(
+                nodoB.id
+            );
+
+            this.adyacencia[nodoB.id].push(
+                nodoA.id
+            );
+
+        });
 
         console.log(
             "NODOS CREADOS:",
@@ -627,9 +813,20 @@ export class GrafoDia extends Phaser.Scene {
 
             halo.setStrokeStyle(
                 4,
-                0x7bb8ff,
+                nodo.esVictima
+                    ? 0xff9ab5
+                    : 0x7bb8ff,
                 1
             );
+
+            if (nodo.esVictima) {
+
+                halo.setFillStyle(
+                    0xff4f7a,
+                    1
+                );
+
+            }
 
             const key =
                 this._obtenerClaveAvatar(
@@ -696,7 +893,9 @@ export class GrafoDia extends Phaser.Scene {
                 this.add.text(
                     0,
                     80,
-                    'culpable',
+                    nodo.esVictima
+                        ? 'víctima'
+                        : 'culpable',
                     {
                         fontFamily:
                             '"VT323", monospace',
@@ -725,6 +924,36 @@ export class GrafoDia extends Phaser.Scene {
             nodo.halo = halo;
 
             nodo.avatar = avatar;
+
+        });
+
+    }
+
+    ocultarGrafoPrincipal() {
+
+        this.nodos.forEach(nodo => {
+
+            if (nodo.container) {
+
+                nodo.container.setVisible(false);
+
+            }
+
+        });
+
+        this.aristas.forEach(arista => {
+
+            if (arista.graphics) {
+
+                arista.graphics.setVisible(false);
+
+            }
+
+            if (arista.textoPeso) {
+
+                arista.textoPeso.setVisible(false);
+
+            }
 
         });
 
@@ -1362,10 +1591,35 @@ export class GrafoDia extends Phaser.Scene {
 
                         );
 
+                        const columna1 =
+                            conexiones.slice(0, 6);
+
+                        const columna2 =
+                            conexiones.slice(6, 12);
+
+                        let textoFinal = '';
+
+                        for (let i = 0; i < 6; i++) {
+
+                            const izquierda =
+                                columna1[i] || '';
+
+                            const derecha =
+                                columna2[i] || '';
+
+                            textoFinal +=
+                                izquierda.padEnd(28, ' ')
+                                + derecha
+                                + '\n';
+
+                        }
+
                         this.txtRecorrido.setText(
+                            textoFinal
+                        );
 
-                            conexiones.join('\n')
-
+                        this.txtRecorrido.setText(
+                            textoFinal
                         );
 
                         this.txtEstadoDinamico.setText(
@@ -1985,6 +2239,68 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
+    ejecutarBFS(inicio = 'Abril') {
+
+        const visitados = new Set();
+
+        const cola = [inicio];
+
+        const recorrido = [];
+
+        while (cola.length > 0) {
+
+            const actual = cola.shift();
+
+            if (visitados.has(actual)) {
+                continue;
+            }
+
+            visitados.add(actual);
+
+            recorrido.push(actual);
+
+            const vecinos =
+                this.obtenerVecinos(actual);
+
+            vecinos.forEach(vecino => {
+
+                if (!visitados.has(vecino.id)) {
+                    cola.push(vecino.id);
+                }
+            });
+        }
+
+        return recorrido;
+    }
+
+    ejecutarDFS(inicio = 'Abril') {
+
+        const visitados = new Set();
+
+        const recorrido = [];
+
+        const dfs = (actual) => {
+
+            visitados.add(actual);
+
+            recorrido.push(actual);
+
+            const vecinos =
+                this.obtenerVecinos(actual);
+
+            vecinos.forEach(vecino => {
+
+                if (!visitados.has(vecino.id)) {
+                    dfs(vecino.id);
+                }
+            });
+        };
+
+        dfs(inicio);
+
+        return recorrido;
+    }
+
     animarBFSyDFS() {
 
         const ordenBFS = this.obtenerOrdenBFS();
@@ -2112,13 +2428,11 @@ export class GrafoDia extends Phaser.Scene {
 
             () => {
 
-                const nivelesBFS = Math.max(
-                    ...ordenBFS.map(p => p.nivel)
-                );
+                const nivelesBFS =
+                    ordenBFS.length;
 
-                const profundidadDFS = Math.max(
-                    ...ordenDFS.map(p => p.nivel)
-                );
+                const profundidadDFS =
+                    ordenDFS.length;
 
                 this.txtEstadisticas.setText(
                     `Casos analizados: ${this.nodos.length}\n`
@@ -2196,6 +2510,18 @@ export class GrafoDia extends Phaser.Scene {
 
         Object.keys(contador).forEach(id => {
 
+            const nodo =
+                this.nodos.find(
+                    n => n.id === id
+                );
+
+            if (
+                nodo &&
+                nodo.esVictima
+            ) {
+                return;
+            }
+
             if (contador[id] > maximo) {
 
                 maximo = contador[id];
@@ -2231,35 +2557,9 @@ export class GrafoDia extends Phaser.Scene {
         );
 
         this.txtRecorrido.setText(
-
-            `BFS:\n`
-
-            + bfs.map(n => {
-
-                const nodo =
-                    this.nodos.find(
-                        x => x.id === n.id
-                    );
-
-                return nodo.nombre;
-
-            }).join(' → ')
-
-            + `\n\nDFS:\n`
-
-            + dfs.map(n => {
-
-                const nodo =
-                    this.nodos.find(
-                        x => x.id === n.id
-                    );
-
-                return nodo.nombre;
-
-            }).join(' → ')
-
+            'Pulsa CONCLUSIONES para ver el resumen final del caso.'
         );
-
+        
         this.nodos.forEach(nodo => {
 
             nodo.halo.setFillStyle(
@@ -2305,6 +2605,25 @@ export class GrafoDia extends Phaser.Scene {
 
         this.mostrarBotonContinuar();
 
+    }
+
+    mostrarResultado(recorrido) {
+
+        const texto =
+            recorrido.join(' → ');
+
+        this.add.text(
+            70,
+            620,
+            texto,
+            {
+                fontSize: '24px',
+                color: '#8dff9c',
+                wordWrap: {
+                    width: 1000
+                }
+            }
+        );
     }
 
     mostrarConclusionBFS(orden) {
@@ -2599,9 +2918,9 @@ export class GrafoDia extends Phaser.Scene {
                 640,
                 340,
 
-                `ULTIMATE CULPABLE:\n\n`
+                `CULPABLE PRINCIPAL:\n\n`
 
-                + `${this.ultimateCulpable.nombre}\n\n`
+                + `al responsable principal: ${this.ultimateCulpable.nombre}`
 
                 + `• BFS expandió conexiones\n`
 
@@ -2677,6 +2996,446 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
+    crearGrafoMaestro() {
+
+        this.grafoMaestro = [];
+
+        const visibles =
+            desbloqueoPorDia[this.diaActual] || [];
+
+        const nodoValeria = {
+
+            id: 'VALERIA',
+
+            nombre: 'Valeria',
+
+            x: 1030,
+
+            y: 330,
+
+            activo: true,
+
+            esVictima: true
+        };
+
+        this.nodoValeria = nodoValeria;
+
+        this.grafoMaestro.push(
+            nodoValeria
+        );
+
+        visibles.forEach((nombre, index) => {
+
+            const personaje =
+                implicadosTotales.find(
+                    p => p.nombre === nombre
+                );
+
+            if (!personaje) return;
+
+            const nodo = {
+
+                id: personaje.nombre,
+
+                nombre: personaje.nombre,
+
+                x: 520 + (index % 4) * 120,
+
+                y: 170 + Math.floor(index / 4) * 130,
+
+                activo: true,
+
+                personaje
+            };
+
+            this.grafoMaestro.push(nodo);
+
+        });
+
+        this.aristasActivas = [];
+
+        conexionesMaestras.forEach(conexion => {
+
+            const nodoA =
+                this.grafoMaestro.find(
+                    n => n.id === conexion[0]
+                );
+
+            const nodoB =
+                this.grafoMaestro.find(
+                    n => n.id === conexion[1]
+                );
+
+            if (!nodoA || !nodoB) return;
+
+            this.aristasActivas.push({
+
+                nodoA,
+
+                nodoB
+
+            });
+
+        });
+
+    }
+
+    obtenerVecinos(idNodo) {
+
+        const vecinos = [];
+
+        this.aristasActivas.forEach(arista => {
+
+            if (arista.nodoA.id === idNodo) {
+
+                vecinos.push(
+                    arista.nodoB
+                );
+
+            }
+
+            if (arista.nodoB.id === idNodo) {
+
+                vecinos.push(
+                    arista.nodoA
+                );
+
+            }
+
+        });
+
+        return vecinos;
+
+    }
+
+    abrirModalGrafo() {
+
+        const fondo =
+            this.add.rectangle(
+                640,
+                360,
+                1280,
+                720,
+                0x000000,
+                0.84
+            );
+
+        fondo.setDepth(300);
+
+        const panel =
+            this.add.rectangle(
+                640,
+                360,
+                1120,
+                620,
+                0x041127,
+                1
+            );
+
+        panel.setStrokeStyle(
+            4,
+            0x5ea2ff,
+            1
+        );
+
+        panel.setDepth(301);
+
+        const titulo =
+            this.add.text(
+                640,
+                70,
+                'GRAFO COMPLETO',
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '52px',
+
+                    color: '#ffffff'
+                }
+            );
+
+        titulo.setOrigin(0.5);
+
+        titulo.setDepth(302);
+
+        let posiciones = [];
+
+        const total =
+            this.nodos.length;
+
+        // =====================================
+        // GRAFOS PEQUEÑOS
+        // =====================================
+
+        if (total <= 10) {
+
+            const radio = 230;
+
+            this.nodos.forEach((nodo, index) => {
+
+                const angulo =
+                    (Math.PI * 2 * index)
+                    / total
+                    - Math.PI / 2;
+
+                posiciones.push({
+
+                    x:
+                        Math.cos(angulo)
+                        * radio,
+
+                    y:
+                        Math.sin(angulo)
+                        * radio
+
+                });
+
+            });
+
+        }
+
+        // =====================================
+        // GRAFOS GRANDES
+        // =====================================
+
+        else {
+
+            const columnas = 5;
+
+            const espacioX = 170;
+
+            const espacioY = 145;
+
+            this.nodos.forEach((nodo, index) => {
+
+                const col =
+                    index % columnas;
+
+                const fila =
+                    Math.floor(index / columnas);
+
+                posiciones.push({
+
+                    x:
+                        (col * espacioX)
+                        - 380,
+
+                    y:
+                        (fila * espacioY)
+                        - 180
+
+                });
+
+            });
+
+        }
+
+        const container =
+            this.add.container(
+                640,
+                360
+            );
+
+        container.setDepth(302);
+
+        this.aristas.forEach(arista => {
+
+            const linea =
+                this.add.graphics();
+
+            linea.lineStyle(
+                5,
+                0x7bb8ff,
+                0.9
+            );
+
+            const indexA =
+                this.nodos.indexOf(
+                    arista.nodoA
+                );
+
+            const indexB =
+                this.nodos.indexOf(
+                    arista.nodoB
+                );
+
+            const posA =
+                posiciones[indexA];
+
+            const posB =
+                posiciones[indexB];
+
+            linea.beginPath();
+
+            linea.moveTo(
+                posA.x,
+                posA.y
+            );
+
+            linea.lineTo(
+                posB.x,
+                posB.y
+            );
+
+            linea.strokePath();
+
+            container.add(linea);
+
+        });
+
+        this.nodos.forEach(nodo => {
+
+            const index =
+                this.nodos.indexOf(nodo);
+
+            const pos =
+                posiciones[index];
+
+            const x = pos.x;
+
+            const y = pos.y;
+
+            const halo =
+                this.add.circle(
+                    x,
+                    y,
+                    40,
+                    nodo.esVictima
+                        ? 0xff4f7a
+                        : 0x2563eb,
+                    1
+                );
+
+            halo.setStrokeStyle(
+                5,
+                0xffffff,
+                1
+            );
+
+            container.add(halo);
+
+            const key =
+                this._obtenerClaveAvatar(
+                    nodo.caso || nodo
+                );
+
+            if (
+                this.textures.exists(key)
+            ) {
+
+                const avatar =
+                    this.add.image(
+                        x,
+                        y - 6,
+                        key
+                    );
+
+                avatar.setDisplaySize(
+                    60,
+                    60
+                );
+
+                container.add(avatar);
+
+            }
+
+            const nombre =
+                this.add.text(
+                    x,
+                    y + 70,
+                    nodo.nombre,
+                    {
+                        fontFamily:
+                            '"VT323", monospace',
+
+                        fontSize: '20px',
+
+                        color: '#ffffff'
+                    }
+                );
+
+            nombre.setOrigin(0.5);
+
+            container.add(nombre);
+
+        });
+
+        container.setSize(
+            2000,
+            2000
+        );
+
+        container.setInteractive();
+
+        this.input.setDraggable(
+            container
+        );
+
+        this.input.on(
+            'drag',
+            (
+                pointer,
+                gameObject,
+                dragX,
+                dragY
+            ) => {
+
+                if (
+                    gameObject === container
+                ) {
+
+                    container.x = dragX;
+
+                    container.y = dragY;
+
+                }
+
+            }
+        );
+
+        const cerrar =
+            this.add.text(
+                640,
+                655,
+                'CERRAR',
+                {
+                    fontFamily:
+                        '"VT323", monospace',
+
+                    fontSize: '40px',
+
+                    color: '#ffcc66'
+                }
+            );
+
+        cerrar.setOrigin(0.5);
+
+        cerrar.setDepth(303);
+
+        cerrar.setInteractive({
+            cursor: 'pointer'
+        });
+
+        cerrar.on(
+            'pointerdown',
+            () => {
+
+                fondo.destroy();
+
+                panel.destroy();
+
+                titulo.destroy();
+
+                container.destroy();
+
+                cerrar.destroy();
+
+            }
+        );
+
+    }
+
     irASiguienteDia() {
 
         if (
@@ -2707,6 +3466,12 @@ export class GrafoDia extends Phaser.Scene {
             0,
             0
         );
+
+        const ordenBFS =
+            this.ejecutarBFS('Abril') || [];
+
+        const ordenDFS =
+            this.ejecutarDFS('Abril') || [];
 
         this.time.delayedCall(
             420,

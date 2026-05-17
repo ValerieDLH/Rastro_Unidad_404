@@ -397,6 +397,7 @@ export function vectorDelDia(dia) {
 }
 
 export function construirArbolDia(dia, personajesSeleccionados = null) {
+
     const arbol = new ArbolB(5);
     const vector = personajesSeleccionados || vectorDelDia(dia);
 
@@ -405,3 +406,184 @@ export function construirArbolDia(dia, personajesSeleccionados = null) {
     arbolDias[dia] = arbol;
     return arbol;
 }
+
+
+
+// =========================================================
+// GRAFO MAESTRO DEL CASO
+// =========================================================
+
+export const VALERIA = {
+    id: 'VALERIA',
+    nombre: 'Valeria',
+    esVictima: true,
+    activo: true
+};
+
+// =========================================================
+// NODOS IMPLICADOS DEL CASO REAL
+// SOLO LOS AGRESORES PRINCIPALES
+// =========================================================
+
+export const implicadosTotales = [
+
+    Abril,
+    Adam,
+    Allison,
+
+    Camilo,
+    Clara,
+    Cora,
+
+    Eva,
+    Fabio,
+    Irene,
+
+    Leo,
+    Lina,
+    Lucas,
+
+    Ronald,
+    Rosa,
+    Ruben,
+
+    Sara,
+    Sofia,
+    Tyler,
+    Zoe
+];
+
+// =========================================================
+// CONEXIONES DEL GRAFO MAESTRO
+// =========================================================
+
+export const conexionesMaestras = [
+
+    // Día 1
+    ['Abril', 'Adam'],
+    ['Adam', 'Allison'],
+    ['Allison', 'VALERIA'],
+
+    // Día 2
+    ['Camilo', 'Clara'],
+    ['Clara', 'Cora'],
+    ['Cora', 'VALERIA'],
+
+    // Conexiones acumuladas
+    ['Adam', 'Camilo'],
+
+    // Día 3
+    ['Eva', 'Fabio'],
+    ['Fabio', 'Irene'],
+    ['Irene', 'VALERIA'],
+
+    ['Cora', 'Eva'],
+
+    // Día 4
+    ['Leo', 'Lina'],
+    ['Lina', 'Lucas'],
+    ['Lucas', 'VALERIA'],
+
+    ['Fabio', 'Leo'],
+
+    // Día 5
+    ['Ronald', 'Rosa'],
+    ['Rosa', 'Ruben'],
+    ['Ruben', 'Sara'],
+    ['Sara', 'Sofia'],
+    ['Sofia', 'Tyler'],
+    ['Tyler', 'Zoe'],
+    ['Zoe', 'VALERIA'],
+
+    ['Lucas', 'Ronald']
+];
+
+// =========================================================
+// REVELADO PROGRESIVO
+// =========================================================
+
+export const desbloqueoPorDia = {
+
+    1: ['Abril', 'Adam', 'Allison'],
+
+    2: [
+        'Abril',
+        'Adam',
+        'Allison',
+
+        'Camilo',
+        'Clara',
+        'Cora'
+    ],
+
+    3: [
+        'Abril',
+        'Adam',
+        'Allison',
+
+        'Camilo',
+        'Clara',
+        'Cora',
+
+        'Eva',
+        'Fabio',
+        'Irene'
+    ],
+
+    4: [
+        'Abril',
+        'Adam',
+        'Allison',
+
+        'Camilo',
+        'Clara',
+        'Cora',
+
+        'Eva',
+        'Fabio',
+        'Irene',
+
+        'Leo',
+        'Lina',
+        'Lucas'
+    ],
+
+    5: [
+        'Abril',
+        'Adam',
+        'Allison',
+
+        'Camilo',
+        'Clara',
+        'Cora',
+
+        'Eva',
+        'Fabio',
+        'Irene',
+
+        'Leo',
+        'Lina',
+        'Lucas',
+
+        'Ronald',
+        'Rosa',
+        'Ruben',
+        'Sara',
+        'Sofia',
+        'Tyler',
+        'Zoe'
+    ]
+};
+
+
+window.implicadosTotales =
+implicadosTotales;
+
+window.conexionesMaestras =
+    conexionesMaestras;
+
+window.desbloqueoPorDia =
+    desbloqueoPorDia;
+
+window.VALERIA =
+    VALERIA;
