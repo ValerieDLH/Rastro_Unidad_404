@@ -15,7 +15,7 @@ export class LaberintoDigital extends Phaser.Scene {
             ? data.jugadores
             : (this.modoJuego === '2P' ? 2 : 1);
 
-        this.casos = Array.isArray(data.casos) ? data.casos.slice(0, 3) : [];
+        this.casos = Array.isArray(data.casos) ? data.casos.slice(0, 5) : [];
 
         this.yaTermino = false;
         this.encontrados = false;
@@ -1512,6 +1512,139 @@ export class LaberintoDigital extends Phaser.Scene {
         }
     }
 
+    obtenerSancionCaso(caso) {
+        if (!caso) return 'Sanción correspondiente';
+
+        let texto = '';
+
+        if (caso.sancion && caso.sancion.nombre) {
+            texto = caso.sancion.nombre;
+        } else if (caso.sancionCorta) {
+            texto = caso.sancionCorta;
+        } else if (caso.sancionTexto) {
+            texto = caso.sancionTexto;
+        } else if (typeof caso.sancion === 'string') {
+            texto = caso.sancion;
+        } else if (caso.delito) {
+            texto = caso.delito;
+        } else {
+            texto = 'Sanción correspondiente';
+        }
+
+        texto = String(texto)
+            .replace(/^Sanción guía:\s*/i, '')
+            .replace(/^Sanción:\s*/i, '')
+            .trim();
+
+        const t = texto.toLowerCase();
+
+        if (t.includes('amenaza')) {
+            return 'Medida de protección';
+        }
+
+        if (t.includes('asociación') || t.includes('asociacion') || t.includes('organización') || t.includes('organizacion')) {
+            return 'Sanción por organización';
+        }
+
+        if (t.includes('hostigamiento')) {
+            return 'Restricción digital';
+        }
+
+        if (t.includes('acoso')) {
+            return 'Medida de protección';
+        }
+
+        if (t.includes('datos personales')) {
+            return 'Protección de datos';
+        }
+
+        if (t.includes('multa') && t.includes('retract')) {
+            return 'Multa y retractación pública';
+        }
+
+        if (t.includes('difamación') || t.includes('difamacion')) {
+            return 'Eliminar contenido dañino';
+        }
+
+        if (t.includes('calumnia')) {
+            return 'Retractación pública';
+        }
+
+        return this.recortarTextoInforme(texto, 46);
+    }
+
+    obtenerSignificadoBreveCaso(caso) {
+        if (!caso) {
+            return 'Medida aplicada por el daño causado.';
+        }
+
+        const textoBase = String(
+            caso.significadoSancion ||
+            caso.queSignifica ||
+            caso.explicacion ||
+            caso.delito ||
+            caso.sancionTexto ||
+            ''
+        ).toLowerCase();
+
+        if (
+            textoBase.includes('asociación') ||
+            textoBase.includes('asociacion') ||
+            textoBase.includes('organizar') ||
+            textoBase.includes('roles') ||
+            textoBase.includes('tareas') ||
+            textoBase.includes('coordinado')
+        ) {
+            return 'Castiga el ataque coordinado.';
+        }
+
+        if (
+            textoBase.includes('amenaza') ||
+            textoBase.includes('miedo') ||
+            textoBase.includes('daño')
+        ) {
+            return 'Evita que el daño continúe.';
+        }
+
+        if (
+            textoBase.includes('hostigamiento') ||
+            textoBase.includes('acoso') ||
+            textoBase.includes('perseguir') ||
+            textoBase.includes('presionar')
+        ) {
+            return 'Frena la persecución digital.';
+        }
+
+        if (
+            textoBase.includes('datos personales') ||
+            textoBase.includes('privada') ||
+            textoBase.includes('información')
+        ) {
+            return 'Protege la información privada.';
+        }
+
+        if (
+            textoBase.includes('dignidad') ||
+            textoBase.includes('reputación') ||
+            textoBase.includes('reputacion') ||
+            textoBase.includes('honra')
+        ) {
+            return 'Protege la dignidad de Valeria.';
+        }
+
+        return 'Busca reparar el daño causado.';
+    }
+
+    recortarTextoInforme(texto, maximo) {
+        texto = String(texto || '').trim();
+
+        if (texto.length <= maximo) {
+            return texto;
+        }
+
+        return texto.substring(0, maximo - 3).trim() + '...';
+    }
+
     mostrarInformeFinal() {
         this.informeFinalActivo = true;
         this.aInformeAnterior = false;
@@ -1528,20 +1661,22 @@ export class LaberintoDigital extends Phaser.Scene {
             total: (puntajeBase.total || 0) + bonus
         };
 
+        const depthBase = 500;
+
         const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72);
-        overlay.setDepth(100);
+        overlay.setDepth(depthBase);
 
         const papel = this.add.rectangle(640, 360, 1080, 660, 0xf4e5bd, 1);
         papel.setStrokeStyle(5, 0x8a5a2b, 1);
-        papel.setDepth(101);
+        papel.setDepth(depthBase + 1);
 
-        this.add.text(640, 66, 'INFORME DEL LABERINTO DIGITAL', {
+        this.add.text(640, 64, 'INFORME DEL LABERINTO DIGITAL', {
             fontFamily: '"VT323", monospace',
             fontSize: '41px',
             color: '#40291a',
             stroke: '#fff0c8',
             strokeThickness: 3
-        }).setOrigin(0.5).setDepth(102);
+        }).setOrigin(0.5).setDepth(depthBase + 2);
 
         const estado = this.encontrados
             ? 'Alex y Valeria lograron encontrarse dentro de la red.'
@@ -1551,7 +1686,7 @@ export class LaberintoDigital extends Phaser.Scene {
             fontFamily: '"VT323", monospace',
             fontSize: '24px',
             color: '#5a3921'
-        }).setOrigin(0.5).setDepth(102);
+        }).setOrigin(0.5).setDepth(depthBase + 2);
 
         const min = Math.floor(this.tiempoRestante / 60);
         const seg = this.tiempoRestante % 60;
@@ -1559,68 +1694,69 @@ export class LaberintoDigital extends Phaser.Scene {
 
         this.add.text(
             640,
-            133,
-            `Tiempo restante: ${textoTiempo}  •  Preguntas: ${this.puntosPreguntas} pts  •  Bonus total: ${bonus} pts`,
+            134,
+            `Tiempo restante: ${textoTiempo}   •   Preguntas: ${this.puntosPreguntas} pts   •   Bonus total: ${bonus} pts`,
             {
                 fontFamily: '"VT323", monospace',
                 fontSize: '21px',
                 color: '#7a4a28'
             }
-        ).setOrigin(0.5).setDepth(102);
+        ).setOrigin(0.5).setDepth(depthBase + 2);
 
-        let y = 168;
+        const listaCasos = this.casos.slice(0, 5);
+        let y = 166;
 
-        if (this.casos.length > 0) {
-            this.casos.forEach((caso, index) => {
-                const bloque = this.add.rectangle(640, y + 70, 930, 145, 0xfff5d9, 1);
+        if (listaCasos.length > 0) {
+            listaCasos.forEach((caso, index) => {
+                const bloque = this.add.rectangle(640, y + 42, 930, 84, 0xfff5d9, 1);
                 bloque.setStrokeStyle(3, 0xc08a45, 1);
-                bloque.setDepth(102);
+                bloque.setDepth(depthBase + 2);
 
-                this.add.text(205, y + 8, `${index + 1}. Persona identificada: ${caso.nombre}`, {
+                this.add.text(205, y + 3, `${index + 1}. Culpable: ${caso.nombre}`, {
                     fontFamily: '"VT323", monospace',
-                    fontSize: '25px',
+                    fontSize: '24px',
                     color: '#2b1a10'
-                }).setDepth(103);
+                }).setDepth(depthBase + 3);
 
-                this.add.text(205, y + 36, `Delito cometido: ${caso.delito}`, {
+                this.add.text(205, y + 30, `Sanción: ${this.obtenerSancionCaso(caso)}`, {
                     fontFamily: '"VT323", monospace',
-                    fontSize: '22px',
-                    color: '#2b1a10'
-                }).setDepth(103);
-
-                this.add.text(205, y + 64, `Sanción correspondiente: ${caso.sancionTexto || caso.sancionCorta}`, {
-                    fontFamily: '"VT323", monospace',
-                    fontSize: '19px',
+                    fontSize: '20px',
                     color: '#5a3921',
                     wordWrap: { width: 850, useAdvancedWrap: true }
-                }).setDepth(103);
+                }).setDepth(depthBase + 3);
 
-                this.add.text(205, y + 98, `Significado: ${caso.significadoSancion || 'Esta sanción corresponde al daño causado por la conducta detectada.'}`, {
+                this.add.text(205, y + 56, `Significado: ${this.obtenerSignificadoBreveCaso(caso)}`, {
                     fontFamily: '"VT323", monospace',
                     fontSize: '18px',
                     color: '#5a3921',
                     wordWrap: { width: 850, useAdvancedWrap: true }
-                }).setDepth(103);
+                }).setDepth(depthBase + 3);
 
-                y += 153;
+                y += 94;
             });
+        } else {
+            this.add.text(640, 350, 'No hay culpables registrados para mostrar.', {
+                fontFamily: '"VT323", monospace',
+                fontSize: '28px',
+                color: '#5a3921'
+            }).setOrigin(0.5).setDepth(depthBase + 3);
         }
 
-        const btn = this.add.rectangle(640, 675, 320, 52, 0x2d82ff, 1);
+        const btn = this.add.rectangle(640, 665, 320, 58, 0x2d82ff, 1);
         btn.setStrokeStyle(3, 0xffffff, 1);
-        btn.setDepth(104);
+        btn.setDepth(depthBase + 4);
 
-        this.add.text(640, 675, 'CONTINUAR', {
+        this.add.text(640, 665, 'CONTINUAR', {
             fontFamily: '"VT323", monospace',
-            fontSize: '32px',
+            fontSize: '34px',
             color: '#ffffff',
             stroke: '#071021',
             strokeThickness: 4
-        }).setOrigin(0.5).setDepth(105);
+        }).setOrigin(0.5).setDepth(depthBase + 5);
 
-        const zone = this.add.zone(640, 675, 320, 52);
+        const zone = this.add.zone(640, 665, 320, 58);
         zone.setInteractive({ cursor: 'pointer' });
-        zone.setDepth(106);
+        zone.setDepth(depthBase + 6);
 
         zone.on('pointerover', () => {
             btn.setFillStyle(0x4b9bff, 1);
@@ -1662,7 +1798,6 @@ export class LaberintoDigital extends Phaser.Scene {
 
         zone.on('pointerdown', continuar);
     }
-
     cargarAudioMinijuego() {
         if (!this.cache.audio.exists('musicaMinijuegos')) {
             this.load.audio('musicaMinijuegos', 'music/Minijuegos.mp3');

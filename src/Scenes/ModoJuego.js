@@ -11,7 +11,6 @@ export class ModoJuego extends Phaser.Scene {
         this.yaTransicionando = false;
         this.arrastrandoVolumen = false;
 
-        // Movidos 20 px a la derecha y 10 px hacia abajo
         this.area1Player = {
             x: 541,
             y: 433,
@@ -27,6 +26,9 @@ export class ModoJuego extends Phaser.Scene {
         };
 
         this.mostrarZonasDebug = false;
+
+        this.estadoBotonesRK = {};
+        this.teclasRK = null;
     }
 
     preload() {
@@ -79,9 +81,14 @@ export class ModoJuego extends Phaser.Scene {
         this.crearAreasModo();
         this.crearIndicadorSeleccion();
         this.crearControlVolumen();
+        this.configurarRKGame();
 
         this.events.on('shutdown', this.limpiarEventosVolumen, this);
         this.events.on('destroy', this.limpiarEventosVolumen, this);
+    }
+
+    update() {
+        this.actualizarRKGame();
     }
 
     reproducirClick() {
@@ -90,6 +97,186 @@ export class ModoJuego extends Phaser.Scene {
                 volume: 0.35
             });
         }
+    }
+
+    // =========================================================
+    // RK GAME
+    // X  = 1 Player
+    // B  = 2 Players
+    // R1 = Next
+    // L1 = Back
+    // =========================================================
+
+    configurarRKGame() {
+        this.estadoBotonesRK = {};
+
+        this.teclasRK = this.input.keyboard.addKeys({
+            X: Phaser.Input.Keyboard.KeyCodes.X,
+            B: Phaser.Input.Keyboard.KeyCodes.B,
+            R: Phaser.Input.Keyboard.KeyCodes.R,
+            ENTER: Phaser.Input.Keyboard.KeyCodes.ENTER,
+            ESC: Phaser.Input.Keyboard.KeyCodes.ESC,
+            UNO: Phaser.Input.Keyboard.KeyCodes.ONE,
+            DOS: Phaser.Input.Keyboard.KeyCodes.TWO
+        });
+
+        try {
+            if (this.input && this.input.gamepad) {
+                if (typeof this.input.gamepad.start === 'function') {
+                    this.input.gamepad.start();
+                }
+
+                if (typeof this.input.gamepad.startListeners === 'function') {
+                    this.input.gamepad.startListeners();
+                }
+            }
+        } catch (error) {
+            console.warn('RK Game no disponible en esta escena:', error);
+        }
+    }
+
+    actualizarRKGame() {
+        if (this.yaTransicionando) return;
+        if (!this.teclasRK) return;
+
+        const seleccionar1P =
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.X)
+            ||
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.UNO)
+            ||
+            this._botonRKJustDown('X');
+
+        const seleccionar2P =
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.B)
+            ||
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.DOS)
+            ||
+            this._botonRKJustDown('B');
+
+        const presionarNext =
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.R)
+            ||
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.ENTER)
+            ||
+            this._botonRKJustDown('R1');
+
+        const presionarBack =
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.ESC)
+            ||
+            this._botonRKJustDown('L1');
+
+        if (seleccionar1P) {
+            this.reproducirClick();
+            this.seleccionarModo('1P');
+            return;
+        }
+
+        if (seleccionar2P) {
+            this.reproducirClick();
+            this.seleccionarModo('2P');
+            return;
+        }
+
+        if (presionarNext) {
+            this.intentarAvanzar();
+            return;
+        }
+
+        if (presionarBack) {
+            this.intentarVolver();
+            return;
+        }
+    }
+
+    _obtenerPadRK() {
+        if (!this.input || !this.input.gamepad) return null;
+
+        const gamepadPlugin = this.input.gamepad;
+
+        if (typeof gamepadPlugin.getPad === 'function') {
+            return gamepadPlugin.getPad(0);
+        }
+
+        if (
+            gamepadPlugin.gamepads &&
+            gamepadPlugin.gamepads.length > 0
+        ) {
+            return gamepadPlugin.gamepads[0];
+        }
+
+        if (typeof gamepadPlugin.getAll === 'function') {
+            const pads = gamepadPlugin.getAll();
+            return pads && pads.length > 0 ? pads[0] : null;
+        }
+
+        return null;
+    }
+
+    _botonRKJustDown(nombre) {
+        const mapa = {
+            X: [2, 3],
+            B: [1],
+            R1: [5, 7],
+            L1: [4, 6]
+        };
+
+        const indices = mapa[nombre];
+
+        if (!indices) return false;
+
+        const pad = this._obtenerPadRK();
+
+        if (!pad || !pad.buttons) {
+            this.estadoBotonesRK[nombre] = false;
+            return false;
+        }
+
+        const presionado = indices.some(index => {
+            const boton = pad.buttons[index];
+
+            if (!boton) return false;
+
+            return boton.pressed === true || boton.value > 0.35;
+        });
+
+        const antes = this.estadoBotonesRK[nombre] || false;
+
+        this.estadoBotonesRK[nombre] = presionado;
+
+        return presionado && !antes;
+    }
+
+    intentarAvanzar() {
+        if (this.yaTransicionando) return;
+
+        if (!this.modoSeleccionado) {
+            this.mostrarAvisoSeleccion();
+            return;
+        }
+
+        this.reproducirClick();
+        this.irAlJuego();
+    }
+
+    intentarVolver() {
+        if (this.yaTransicionando) return;
+
+        this.reproducirClick();
+        this.yaTransicionando = true;
+
+        if (this.backZone) this.backZone.disableInteractive();
+        if (this.nextZone) this.nextZone.disableInteractive();
+        if (this.zona1Player) this.zona1Player.disableInteractive();
+        if (this.zona2Player) this.zona2Player.disableInteractive();
+        if (this.sliderZone) this.sliderZone.disableInteractive();
+
+        this.cameras.main.fadeOut(350, 0, 0, 0);
+
+        this.time.delayedCall(350, () => {
+            this.scene.start('Instrucciones', {
+                volumenActual: this.volumenActual
+            });
+        });
     }
 
     crearBotonBack() {
@@ -124,18 +311,7 @@ export class ModoJuego extends Phaser.Scene {
         });
 
         this.backZone.on('pointerdown', () => {
-            if (this.yaTransicionando) return;
-
-            this.reproducirClick();
-            this.yaTransicionando = true;
-
-            this.cameras.main.fadeOut(350, 0, 0, 0);
-
-            this.time.delayedCall(350, () => {
-                this.scene.start('Instrucciones', {
-                    volumenActual: this.volumenActual
-                });
-            });
+            this.intentarVolver();
         });
     }
 
@@ -171,15 +347,7 @@ export class ModoJuego extends Phaser.Scene {
         });
 
         this.nextZone.on('pointerdown', () => {
-            if (this.yaTransicionando) return;
-
-            if (!this.modoSeleccionado) {
-                this.mostrarAvisoSeleccion();
-                return;
-            }
-
-            this.reproducirClick();
-            this.irAlJuego();
+            this.intentarAvanzar();
         });
     }
 

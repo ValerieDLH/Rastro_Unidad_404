@@ -15,10 +15,17 @@ export class AtrapaEvidencia extends Phaser.Scene {
             ? data.jugadores
             : (this.modoJuego === '2P' ? 2 : 1);
 
-        this.casos = Array.isArray(data.casos) ? data.casos.slice(0, 3) : [];
+        const casosBase = Array.isArray(data.casos) ? data.casos.slice(0, 4) : [];
+
+        this.casos = casosBase.map((caso, index) => {
+            return {
+                ...caso,
+                palabraClave: this.obtenerPalabraBreveCaso(caso, index)
+            };
+        });
 
         this.objetivoIndex = 0;
-        this.etapaActual = 'sancion';
+        this.etapaActual = 'evidencia';
         this.notaFinalActiva = false;
         this.aNotaAnterior = false;
         this.continuarNotaFinal = null;
@@ -490,21 +497,22 @@ export class AtrapaEvidencia extends Phaser.Scene {
             );
         }
     }
+
     iniciarObjetivoActual() {
         if (this.objetivoIndex >= this.casos.length) {
             this.mostrarNotaFinal();
             return;
         }
 
-        this.etapaActual = 'sancion';
+        this.etapaActual = 'evidencia';
         this.letrasRecogidasCounts = {};
         this.limpiarObjetosCayendo();
 
         const caso = this.casos[this.objetivoIndex];
 
         this.txtObjetivo.setText(`Objetivo ${this.objetivoIndex + 1}/${this.casos.length}`);
-        this.txtModo.setText('Modo: SANCIÓN CORRESPONDIENTE');
-        this.txtSubtitulo.setText(`Sanción: ${caso.sancionCorta}`);
+        this.txtModo.setText('Modo: PALABRA CLAVE');
+        this.txtSubtitulo.setText(`Palabra: ${caso.palabraClave}`);
 
         this.actualizarProgreso();
     }
@@ -512,11 +520,123 @@ export class AtrapaEvidencia extends Phaser.Scene {
     obtenerCasoActual() {
         return this.casos[this.objetivoIndex] || null;
     }
+
+    obtenerPalabraBreveCaso(caso, index) {
+        const palabras = [
+            'ACOSO',
+            'EXCLUSIÓN',
+            'INSULTOS',
+            'LEY'
+        ];
+
+        return palabras[index % palabras.length];
+    }
+
+    obtenerSancionCaso(caso) {
+        if (!caso) return 'Sanción correspondiente';
+
+        let texto = '';
+
+        if (caso.sancion && caso.sancion.nombre) {
+            texto = caso.sancion.nombre;
+        } else if (caso.sancionCorta) {
+            texto = caso.sancionCorta;
+        } else if (caso.sancionTexto) {
+            texto = caso.sancionTexto;
+        } else if (typeof caso.sancion === 'string') {
+            texto = caso.sancion;
+        } else {
+            texto = 'Sanción correspondiente';
+        }
+
+        texto = String(texto)
+            .replace(/^Sanción guía:\s*/i, '')
+            .replace(/^Sanción:\s*/i, '')
+            .trim();
+
+        const t = texto.toLowerCase();
+
+        if (t.includes('multa') && t.includes('retract')) {
+            return 'Multa y retractación pública';
+        }
+
+        if (t.includes('orden de cese') || t.includes('bloqueo')) {
+            return 'Orden de cese y bloqueo';
+        }
+
+        if (t.includes('protección') || t.includes('proteccion')) {
+            return 'Medida de protección';
+        }
+
+        if (t.includes('llamado de atención') || t.includes('llamado de atencion')) {
+            return 'Llamado de atención';
+        }
+
+        return this.recortarTexto(texto, 42);
+    }
+
+    obtenerSignificadoBreveCaso(caso) {
+        if (!caso) {
+            return 'Medida aplicada por el daño causado.';
+        }
+
+        const textoBase = String(
+            caso.significadoSancion ||
+            caso.queSignifica ||
+            caso.explicacion ||
+            caso.delito ||
+            ''
+        ).toLowerCase();
+
+        if (
+            textoBase.includes('dignidad') ||
+            textoBase.includes('reputación') ||
+            textoBase.includes('reputacion')
+        ) {
+            return 'Protege la dignidad de Valeria.';
+        }
+
+        if (
+            textoBase.includes('repit') ||
+            textoBase.includes('insistencia') ||
+            textoBase.includes('acoso')
+        ) {
+            return 'Detiene conductas repetidas.';
+        }
+
+        if (
+            textoBase.includes('tranquilidad') ||
+            textoBase.includes('burla') ||
+            textoBase.includes('molestia')
+        ) {
+            return 'Frena burlas y molestias.';
+        }
+
+        if (
+            textoBase.includes('protección') ||
+            textoBase.includes('proteccion')
+        ) {
+            return 'Evita que el daño continúe.';
+        }
+
+        return 'Busca reparar el daño causado.';
+    }
+
+    recortarTexto(texto, maximo) {
+        texto = String(texto || '').trim();
+
+        if (texto.length <= maximo) {
+            return texto;
+        }
+
+        return texto.substring(0, maximo - 3).trim() + '...';
+    }
+
     obtenerTextoObjetivoActualOriginal() {
         const caso = this.obtenerCasoActual();
         if (!caso) return '';
 
-        return caso.sancionCorta || '';
+        return caso.palabraClave || caso.sancionCorta || '';
     }
 
     limpiarTexto(texto) {
@@ -605,6 +725,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
             `Letras perdidas: ${this.letrasPerdidas}`
         );
     }
+
     obtenerXLibre(intentos = 40) {
         const distanciaMinimaX = 115;
         const distanciaMinimaY = 135;
@@ -642,6 +763,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
         return null;
     }
+
     generarObjeto() {
         if (this.juegoTerminado) return;
 
@@ -653,15 +775,17 @@ export class AtrapaEvidencia extends Phaser.Scene {
         }
 
         const piedrasEnPantalla = this.objetosCayendo.filter(obj => obj.tipo === 'piedra').length;
-        const letrasEnPantalla = this.objetosCayendo.filter(obj => obj.tipo === 'letra').length;
+        const totalEnPantalla = this.objetosCayendo.length;
 
         const puedeCrearPiedra =
-            piedrasEnPantalla < 2 &&
-            letrasEnPantalla < 5 &&
-            disponibles.length > 0;
+            piedrasEnPantalla < 3 &&
+            totalEnPantalla < 8;
 
-        if (puedeCrearPiedra && Phaser.Math.Between(1, 100) <= 24) {
-            this.time.delayedCall(260, () => {
+        const probabilidadPiedra =
+            disponibles.length > 0 ? 38 : 70;
+
+        if (puedeCrearPiedra && Phaser.Math.Between(1, 100) <= probabilidadPiedra) {
+            this.time.delayedCall(220, () => {
                 if (!this.juegoTerminado) {
                     this.crearPiedra();
                 }
@@ -872,9 +996,10 @@ export class AtrapaEvidencia extends Phaser.Scene {
         this.cameras.main.shake(60, 0.002);
         this.actualizarProgreso();
     }
+
     avanzarEtapa() {
         this.objetivoIndex += 1;
-        this.etapaActual = 'sancion';
+        this.etapaActual = 'evidencia';
 
         if (this.objetivoIndex >= this.casos.length) {
             this.mostrarNotaFinal();
@@ -920,78 +1045,80 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
         const puntajeActualizado = {
             ...this.puntajeDia,
-            dia: 1, 
+            dia: 1,
             bonusMinijuego: bonus,
             totalBruto: (this.puntajeDia?.totalBruto || 0) + bonus,
             total: (this.puntajeDia?.total || 0) + bonus
         };
 
+        const depthBase = 500;
+
         const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72);
-        overlay.setDepth(100);
+        overlay.setDepth(depthBase);
 
         const papel = this.add.rectangle(640, 360, 1080, 660, 0xf4e5bd, 1);
         papel.setStrokeStyle(5, 0x8a5a2b, 1);
-        papel.setDepth(101);
+        papel.setDepth(depthBase + 1);
 
-        this.add.text(640, 68, 'INFORME DEL DETECTIVE ALEX', {
+        this.add.text(640, 62, 'INFORME DEL DETECTIVE ALEX', {
             fontFamily: '"VT323", monospace',
-            fontSize: '46px',
+            fontSize: '43px',
             color: '#40291a',
             stroke: '#fff0c8',
             strokeThickness: 3
-        }).setOrigin(0.5).setDepth(102);
+        }).setOrigin(0.5).setDepth(depthBase + 2);
 
-        this.add.text(640, 108, 'Evidencias recuperadas durante el minijuego', {
+        this.add.text(640, 102, 'Resumen de evidencias recuperadas', {
             fontFamily: '"VT323", monospace',
-            fontSize: '26px',
+            fontSize: '24px',
             color: '#5a3921'
-        }).setOrigin(0.5).setDepth(102);
+        }).setOrigin(0.5).setDepth(depthBase + 2);
 
-        this.add.text(640, 140, `Bonus obtenido: ${bonus} puntos  •  Piedras recogidas: ${this.piedrasRecogidas}  •  Letras perdidas: ${this.letrasPerdidas}`, {
-            fontFamily: '"VT323", monospace',
-            fontSize: '22px',
-            color: '#7a4a28'
-        }).setOrigin(0.5).setDepth(102);
+        this.add.text(
+            640,
+            134,
+            `Bonus: ${bonus} puntos   •   Piedras: ${this.piedrasRecogidas}   •   Letras perdidas: ${this.letrasPerdidas}`,
+            {
+                fontFamily: '"VT323", monospace',
+                fontSize: '21px',
+                color: '#7a4a28'
+            }
+        ).setOrigin(0.5).setDepth(depthBase + 2);
 
-        let y = 178;
+        const listaCasos = this.casos.slice(0, 4);
+        let y = 174;
 
-        this.casos.forEach((caso, index) => {
-            const bloque = this.add.rectangle(640, y + 70, 930, 145, 0xfff5d9, 1);
+        listaCasos.forEach((caso, index) => {
+            const bloque = this.add.rectangle(640, y + 43, 930, 88, 0xfff5d9, 1);
             bloque.setStrokeStyle(3, 0xc08a45, 1);
-            bloque.setDepth(102);
+            bloque.setDepth(depthBase + 2);
 
-            this.add.text(205, y + 8, `${index + 1}. Persona identificada: ${caso.nombre}`, {
+            this.add.text(205, y + 2, `${index + 1}. Culpable: ${caso.nombre}`, {
                 fontFamily: '"VT323", monospace',
-                fontSize: '25px',
+                fontSize: '24px',
                 color: '#2b1a10'
-            }).setDepth(103);
+            }).setDepth(depthBase + 3);
 
-            this.add.text(205, y + 36, `Conducta detectada: ${caso.delito}`, {
+            this.add.text(205, y + 30, `Sanción: ${this.obtenerSancionCaso(caso)}`, {
                 fontFamily: '"VT323", monospace',
-                fontSize: '22px',
-                color: '#2b1a10'
-            }).setDepth(103);
+                fontSize: '20px',
+                color: '#5a3921',
+                wordWrap: { width: 850, useAdvancedWrap: true }
+            }).setDepth(depthBase + 3);
 
-            this.add.text(205, y + 64, `Medida correspondiente: ${caso.sancionTexto || caso.sancionCorta}`, {
+            this.add.text(205, y + 57, `Significado: ${this.obtenerSignificadoBreveCaso(caso)}`, {
                 fontFamily: '"VT323", monospace',
                 fontSize: '19px',
                 color: '#5a3921',
                 wordWrap: { width: 850, useAdvancedWrap: true }
-            }).setDepth(103);
+            }).setDepth(depthBase + 3);
 
-            this.add.text(205, y + 98, `Explicación: ${caso.significadoSancion || 'Esta medida corresponde al daño causado por la conducta detectada.'}`, {
-                fontFamily: '"VT323", monospace',
-                fontSize: '18px',
-                color: '#5a3921',
-                wordWrap: { width: 850, useAdvancedWrap: true }
-            }).setDepth(103);
-
-            y += 155;
+            y += 104;
         });
 
         const btn = this.add.rectangle(640, 665, 320, 58, 0x2d82ff, 1);
         btn.setStrokeStyle(3, 0xffffff, 1);
-        btn.setDepth(104);
+        btn.setDepth(depthBase + 4);
 
         this.add.text(640, 665, 'CONTINUAR', {
             fontFamily: '"VT323", monospace',
@@ -999,13 +1126,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
             color: '#ffffff',
             stroke: '#071021',
             strokeThickness: 4
-        }).setOrigin(0.5).setDepth(105);
-
-        this.add.text(640, 704, 'Presiona A en RK Game o haz clic para continuar', {
-            fontFamily: '"VT323", monospace',
-            fontSize: '22px',
-            color: '#40291a'
-        }).setOrigin(0.5).setDepth(105);
+        }).setOrigin(0.5).setDepth(depthBase + 5);
 
         const continuar = () => {
             if (!this.notaFinalActiva) return;
@@ -1016,13 +1137,13 @@ export class AtrapaEvidencia extends Phaser.Scene {
             this.cameras.main.fadeOut(350, 0, 0, 0);
 
             this.time.delayedCall(350, () => {
-            this.scene.start('PuntajeDia', {
+                this.scene.start('PuntajeDia', {
                     puntajeDia: puntajeActualizado,
                     siguienteEstado: this.siguienteEstado,
                     modoJuego: this.modoJuego,
                     jugadores: this.jugadores,
                     casosDia: this.casos,
-                    algoritmoGrafo: 'BFS',
+                    algoritmoGrafo: 'BFS_DFS',
                     resultadoMinijuego: {
                         bonus: bonus,
                         piedras: this.piedrasRecogidas,
@@ -1036,7 +1157,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
         const zone = this.add.zone(640, 665, 320, 58);
         zone.setInteractive({ cursor: 'pointer' });
-        zone.setDepth(106);
+        zone.setDepth(depthBase + 6);
 
         zone.on('pointerover', () => {
             btn.setFillStyle(0x4b9bff, 1);

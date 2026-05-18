@@ -806,6 +806,129 @@ export class DetenCadena extends Phaser.Scene {
         return this.jugador1?.puntos || 0;
     }
 
+    obtenerSancionCaso(caso) {
+        if (!caso) return 'Sanción correspondiente';
+
+        let texto = '';
+
+        if (caso.sancion && caso.sancion.nombre) {
+            texto = caso.sancion.nombre;
+        } else if (caso.sancionCorta) {
+            texto = caso.sancionCorta;
+        } else if (caso.sancionTexto) {
+            texto = caso.sancionTexto;
+        } else if (typeof caso.sancion === 'string') {
+            texto = caso.sancion;
+        } else if (caso.delito) {
+            texto = caso.delito;
+        } else {
+            texto = 'Sanción correspondiente';
+        }
+
+        texto = String(texto)
+            .replace(/^Sanción guía:\s*/i, '')
+            .replace(/^Sanción:\s*/i, '')
+            .trim();
+
+        const t = texto.toLowerCase();
+
+        if (t.includes('multa') && t.includes('retract')) {
+            return 'Multa y retractación pública';
+        }
+
+        if (t.includes('orden de cese') || t.includes('bloqueo')) {
+            return 'Orden de cese y bloqueo';
+        }
+
+        if (t.includes('protección') || t.includes('proteccion')) {
+            return 'Medida de protección';
+        }
+
+        if (t.includes('hostigamiento')) {
+            return 'Restricción digital';
+        }
+
+        if (t.includes('difamación') || t.includes('difamacion')) {
+            return 'Eliminar contenido dañino';
+        }
+
+        if (t.includes('calumnia')) {
+            return 'Retractación pública';
+        }
+
+        return this.recortarTextoInforme(texto, 46);
+    }
+
+    obtenerSignificadoBreveCaso(caso) {
+        if (!caso) {
+            return 'Medida aplicada por el daño causado.';
+        }
+
+        const textoBase = String(
+            caso.significadoSancion ||
+            caso.queSignifica ||
+            caso.explicacion ||
+            caso.delito ||
+            caso.sancionTexto ||
+            ''
+        ).toLowerCase();
+
+        if (
+            textoBase.includes('dignidad') ||
+            textoBase.includes('reputación') ||
+            textoBase.includes('reputacion') ||
+            textoBase.includes('honra')
+        ) {
+            return 'Protege la dignidad de Valeria.';
+        }
+
+        if (
+            textoBase.includes('acoso') ||
+            textoBase.includes('repit') ||
+            textoBase.includes('insistencia')
+        ) {
+            return 'Detiene conductas repetidas.';
+        }
+
+        if (
+            textoBase.includes('hostigamiento') ||
+            textoBase.includes('presionar') ||
+            textoBase.includes('humillar') ||
+            textoBase.includes('intimidar')
+        ) {
+            return 'Frena la presión y humillación.';
+        }
+
+        if (
+            textoBase.includes('difamación') ||
+            textoBase.includes('difamacion') ||
+            textoBase.includes('falsa') ||
+            textoBase.includes('rumor')
+        ) {
+            return 'Evita que se difunda daño falso.';
+        }
+
+        if (
+            textoBase.includes('protección') ||
+            textoBase.includes('proteccion') ||
+            textoBase.includes('amenaza')
+        ) {
+            return 'Evita que el daño continúe.';
+        }
+
+        return 'Busca reparar el daño causado.';
+    }
+
+    recortarTextoInforme(texto, maximo) {
+        texto = String(texto || '').trim();
+
+        if (texto.length <= maximo) {
+            return texto;
+        }
+
+        return texto.substring(0, maximo - 3).trim() + '...';
+    }
+
     mostrarInformeFinal() {
         if (this.yaTermino) return;
 
@@ -825,90 +948,93 @@ export class DetenCadena extends Phaser.Scene {
             total: (puntajeBase.total || 0) + bonus
         };
 
+        const depthBase = 500;
+
         const overlay = this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.72);
-        overlay.setDepth(100);
+        overlay.setDepth(depthBase);
 
         const papel = this.add.rectangle(640, 360, 1080, 660, 0xf4e5bd, 1);
         papel.setStrokeStyle(5, 0x8a5a2b, 1);
-        papel.setDepth(101);
+        papel.setDepth(depthBase + 1);
 
-        this.add.text(640, 66, 'INFORME DEL FILTRO DE LA RED', {
+        this.add.text(640, 64, 'INFORME DEL FILTRO DE LA RED', {
             fontFamily: '"VT323", monospace',
             fontSize: '43px',
             color: '#40291a',
             stroke: '#fff0c8',
             strokeThickness: 3
-        }).setOrigin(0.5).setDepth(102);
+        }).setOrigin(0.5).setDepth(depthBase + 2);
 
-        this.add.text(640, 103, 'Personas responsables y sanciones correspondientes del Día 2', {
+        this.add.text(640, 103, 'Culpables detectados durante el Día 2', {
             fontFamily: '"VT323", monospace',
             fontSize: '24px',
             color: '#5a3921'
-        }).setOrigin(0.5).setDepth(102);
+        }).setOrigin(0.5).setDepth(depthBase + 2);
 
         const resumen = this.jugadores === 2
-            ? `Bonus total: ${bonus} pts  •  J1: ${this.jugador1.aciertos}/5 aciertos  •  J2: ${this.jugador2.aciertos}/5 aciertos`
-            : `Bonus total: ${bonus} pts  •  Aciertos: ${this.jugador1.aciertos}/5  •  Errores: ${this.jugador1.errores}`;
+            ? `Bonus total: ${bonus} pts   •   J1: ${this.jugador1.aciertos}/5 aciertos   •   J2: ${this.jugador2.aciertos}/5 aciertos`
+            : `Bonus total: ${bonus} pts   •   Aciertos: ${this.jugador1.aciertos}/5   •   Errores: ${this.jugador1.errores}`;
 
-        this.add.text(640, 133, resumen, {
+        this.add.text(640, 134, resumen, {
             fontFamily: '"VT323", monospace',
-            fontSize: '22px',
+            fontSize: '21px',
             color: '#7a4a28'
-        }).setOrigin(0.5).setDepth(102);
+        }).setOrigin(0.5).setDepth(depthBase + 2);
 
-        let y = 168;
+        const listaCasos = this.casos.slice(0, 3);
+        let y = 178;
 
-        if (this.casos.length > 0) {
-            this.casos.forEach((caso, index) => {
-                const bloque = this.add.rectangle(640, y + 70, 930, 145, 0xfff5d9, 1);
+        if (listaCasos.length > 0) {
+            listaCasos.forEach((caso, index) => {
+                const bloque = this.add.rectangle(640, y + 47, 930, 94, 0xfff5d9, 1);
                 bloque.setStrokeStyle(3, 0xc08a45, 1);
-                bloque.setDepth(102);
+                bloque.setDepth(depthBase + 2);
 
-                this.add.text(205, y + 8, `${index + 1}. Persona identificada: ${caso.nombre}`, {
+                this.add.text(205, y + 4, `${index + 1}. Culpable: ${caso.nombre}`, {
                     fontFamily: '"VT323", monospace',
                     fontSize: '25px',
                     color: '#2b1a10'
-                }).setDepth(103);
+                }).setDepth(depthBase + 3);
 
-                this.add.text(205, y + 36, `Delito cometido: ${caso.delito}`, {
+                this.add.text(205, y + 33, `Sanción: ${this.obtenerSancionCaso(caso)}`, {
                     fontFamily: '"VT323", monospace',
-                    fontSize: '22px',
-                    color: '#2b1a10'
-                }).setDepth(103);
+                    fontSize: '21px',
+                    color: '#5a3921',
+                    wordWrap: { width: 850, useAdvancedWrap: true }
+                }).setDepth(depthBase + 3);
 
-                this.add.text(205, y + 64, `Sanción correspondiente: ${caso.sancionTexto || caso.sancionCorta}`, {
+                this.add.text(205, y + 61, `Significado: ${this.obtenerSignificadoBreveCaso(caso)}`, {
                     fontFamily: '"VT323", monospace',
                     fontSize: '19px',
                     color: '#5a3921',
                     wordWrap: { width: 850, useAdvancedWrap: true }
-                }).setDepth(103);
+                }).setDepth(depthBase + 3);
 
-                this.add.text(205, y + 98, `Significado: ${caso.significadoSancion || 'Esta sanción corresponde al daño causado por la conducta detectada.'}`, {
-                    fontFamily: '"VT323", monospace',
-                    fontSize: '18px',
-                    color: '#5a3921',
-                    wordWrap: { width: 850, useAdvancedWrap: true }
-                }).setDepth(103);
-
-                y += 153;
+                y += 112;
             });
+        } else {
+            this.add.text(640, 350, 'No hay culpables registrados para mostrar.', {
+                fontFamily: '"VT323", monospace',
+                fontSize: '28px',
+                color: '#5a3921'
+            }).setOrigin(0.5).setDepth(depthBase + 3);
         }
 
-        const btn = this.add.rectangle(640, 675, 320, 52, 0x2d82ff, 1);
+        const btn = this.add.rectangle(640, 665, 320, 58, 0x2d82ff, 1);
         btn.setStrokeStyle(3, 0xffffff, 1);
-        btn.setDepth(104);
+        btn.setDepth(depthBase + 4);
 
-        this.add.text(640, 675, 'CONTINUAR', {
+        this.add.text(640, 665, 'CONTINUAR', {
             fontFamily: '"VT323", monospace',
-            fontSize: '32px',
+            fontSize: '34px',
             color: '#ffffff',
             stroke: '#071021',
             strokeThickness: 4
-        }).setOrigin(0.5).setDepth(105);
+        }).setOrigin(0.5).setDepth(depthBase + 5);
 
-        const zone = this.add.zone(640, 675, 320, 52);
+        const zone = this.add.zone(640, 665, 320, 58);
         zone.setInteractive({ cursor: 'pointer' });
-        zone.setDepth(106);
+        zone.setDepth(depthBase + 6);
 
         zone.on('pointerover', () => {
             btn.setFillStyle(0x4b9bff, 1);
