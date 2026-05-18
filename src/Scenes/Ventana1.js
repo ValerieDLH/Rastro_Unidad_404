@@ -510,7 +510,7 @@ export class Ventana1 extends Phaser.Scene {
                 wordWrap: { width: 360 }
             }).setOrigin(0, 0.5).setDepth(11);
 
-            this.add.text(618, 380,
+            this.add.text(618, 390,
                 'Fue la persona más activa y peligrosa\n' +
                 'de toda la red de acoso contra Valeria.\n' +
                 'El análisis lo señala como el principal\n' +

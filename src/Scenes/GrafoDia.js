@@ -82,12 +82,28 @@ export class GrafoDia extends Phaser.Scene {
             this.load.audio('click', 'music/click.mp3');
         }
 
+        if (!this.cache.audio.exists('musicaGrafo')){
+            this.load.audio('musicaGrafo', 'music/b5.mp3' )
+        }
+        
     }
 
     create() {
 
         this.cameras.main.setBackgroundColor('#031027');
         this.cameras.main.fadeIn(350, 0, 0, 0);
+
+        this.musicaGrafo = this.sound.add('musicaGrafo', {
+            volume: 0, 
+            loop: true
+        });
+        this.musicaGrafo.play();
+        this.tweens.add({
+            targets: this.musicaGrafo,
+            volume: this.volumenActual,
+            duration: 850,
+            ease: 'Sine.easeOut'
+        });
 
         this.crearFondo();
         this.crearTitulo();
@@ -437,7 +453,7 @@ export class GrafoDia extends Phaser.Scene {
 
             this.add.text(
                 145,
-                554,
+                564,
                 'ESTADÍSTICAS',
                 {
                     fontFamily: '"VT323", monospace',
@@ -463,7 +479,7 @@ export class GrafoDia extends Phaser.Scene {
             this.lblBFS =
                 this.add.text(
                     500,
-                    554,
+                    564,
                     'BFS',
                     {
                         fontFamily: '"VT323", monospace',
@@ -489,7 +505,7 @@ export class GrafoDia extends Phaser.Scene {
             this.lblDFS =
                 this.add.text(
                     960,
-                    554,
+                    564,
                     'DFS',
                     {
                         fontFamily: '"VT323", monospace',
@@ -526,7 +542,7 @@ export class GrafoDia extends Phaser.Scene {
 
             this.add.text(
                 138,
-                554,
+                564,
                 'ESTADÍSTICAS',
                 {
                     fontFamily: '"VT323", monospace',
@@ -552,7 +568,7 @@ export class GrafoDia extends Phaser.Scene {
             this.lblDetalle =
                 this.add.text(
                     515,
-                    554,
+                    564,
                     'DETALLE DEL ALGORITMO',
                     {
                         fontFamily: '"VT323", monospace',
@@ -578,7 +594,7 @@ export class GrafoDia extends Phaser.Scene {
             this.lblAyuda =
                 this.add.text(
                     1000,
-                    554,
+                    564,
                     'AYUDA AL CASO',
                     {
                         fontFamily: '"VT323", monospace',
@@ -2537,7 +2553,11 @@ export class GrafoDia extends Phaser.Scene {
             );
 
             this.txtAyuda.setText(
-                'Ayuda al detective a escoger la ruta más corta para analizar el caso de Valeria.'
+                'Dijkstra encuentra la ruta más corta\n' +
+                ' hacia Valeria. Cada peso representa\n' +
+                ' qué tan difícil es acceder a esa\n' +
+                ' persona del caso, priorizando\n' +
+                ' siempre el menor costo acumulado.'
             );
 
             this.mostrarBotonContinuar();
@@ -2612,7 +2632,11 @@ export class GrafoDia extends Phaser.Scene {
                 );
 
                 this.txtAyuda.setText(
-                    'Ayuda al detective a elegir la ruta más corta para revisar pistas y acercarse a quien está detrás del caso.'
+                'Dijkstra halla la ruta de menor costo\n' +
+                'en grafos con pesos positivos. Visita\n' +
+                'siempre el nodo más cercano aún no' +
+                'procesado, garantizando el camino' +
+                'óptimo al llegar a cada nodo.'
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -2774,7 +2798,11 @@ export class GrafoDia extends Phaser.Scene {
                 );
 
                 this.txtAyuda.setText(
-                    'Ayuda al detective a reconstruir la red del caso con las relaciones más importantes y de menor costo.'
+                    'Prim reconstruye la red mínima del\n' +
+                    ' caso, conectando a todos los\n' +
+                    ' implicados con las relaciones más\n' +
+                    ' directas, revelando la estructura\n' +
+                    ' central de la investigación.'               
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -2988,7 +3016,11 @@ export class GrafoDia extends Phaser.Scene {
                 );
 
                 this.txtAyuda.setText(
-                    'Ayuda al detective a medir cuánto impacto puede llegar a Valeria y qué rutas debe controlar primero.'
+                    'Ford-Fulkerson mide cuánta influencia\n' +
+                    ' puede llegar a Valeria. Cada camino\n' +
+                    ' encontrado representa una vía por\n' +
+                    ' donde el caso pudo propagarse\n' +
+                    ' hasta afectarla directamente.'
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -3119,7 +3151,11 @@ export class GrafoDia extends Phaser.Scene {
         );
 
         this.txtAyuda.setText(
-            'Ayuda al detective a unir todos los resultados para entender cómo se propagó el daño y quién pudo estar detrás de todo.'
+            'BFS y DFS mapean la red de contactos.\n' +
+            ' Dijkstra traza la ruta de acceso,\n' +
+            ' Prim revela las conexiones clave y\n' +
+            ' Ford mide el impacto total sobre\n' +
+            ' Valeria. Todos apuntan al culpable.'
         );
 
         this.txtEstadoDinamico.setText(
@@ -3455,36 +3491,58 @@ export class GrafoDia extends Phaser.Scene {
         );
 
     }
-
+    
     irASiguienteDia() {
 
         if (!this.yaPuedeContinuar) return;
 
         this.reproducirClickSeguro();
-
         this.yaPuedeContinuar = false;
 
-        this.cameras.main.fadeOut(
-            420,
-            0,
-            0,
-            0
-        );
+        const hacerTransicion = () => {
 
-        this.time.delayedCall(
-            420,
-            () => {
+            this.cameras.main.fadeOut(
+                420,
+                0,
+                0,
+                0
+            );
 
-                this.scene.start(
-                    'Ventana1',
-                    {
-                        ...this.siguienteEstado,
-                        diaActual: this.diaActual + 1
-                    }
-                );
+            this.time.delayedCall(
+                420,
+                () => {
 
-            }
-        );
+                    this.scene.start(
+                        'Ventana1',
+                        {
+                            ...this.siguienteEstado,
+                            diaActual: this.diaActual + 1
+                        }
+                    );
+
+                }
+            );
+
+        };
+
+        if (this.musicaGrafo && this.musicaGrafo.isPlaying) {
+
+            this.tweens.add({
+                targets: this.musicaGrafo,
+                volume: 0,
+                duration: 500,
+                ease: 'Sine.easeIn',
+                onComplete: () => {
+                    this.musicaGrafo.stop();
+                    hacerTransicion();
+                }
+            });
+
+        } else {
+
+            hacerTransicion();
+
+        }
 
     }
 
