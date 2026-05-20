@@ -325,6 +325,66 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
+    _listaEnColumnas(lista, porColumna = 2) {
+
+        if (!Array.isArray(lista))
+            return '';
+
+        const columnas = [];
+
+        for (
+            let i = 0;
+            i < lista.length;
+            i += porColumna
+        ) {
+
+            columnas.push(
+                lista.slice(
+                    i,
+                    i + porColumna
+                )
+            );
+
+        }
+
+        const filas = Math.max(
+            ...columnas.map(
+                col => col.length
+            )
+        );
+
+        const lineas = [];
+
+        for (
+            let fila = 0;
+            fila < filas;
+            fila++
+        ) {
+
+            const partes =
+                columnas.map(col => {
+
+                    const item =
+                        col[fila] || '';
+
+                    return item.padEnd(
+                        18,
+                        ' '
+                    );
+
+                });
+
+            lineas.push(
+                partes.join('   ')
+            );
+
+        }
+
+        return lineas.join('\n');
+
+    }
+
+
     // =========================================================
     // FONDO Y UI
     // =========================================================
@@ -2553,11 +2613,10 @@ export class GrafoDia extends Phaser.Scene {
             );
 
             this.txtAyuda.setText(
-                'Dijkstra encuentra la ruta más corta\n' +
-                ' hacia Valeria. Cada peso representa\n' +
-                ' qué tan difícil es acceder a esa\n' +
-                ' persona del caso, priorizando\n' +
-                ' siempre el menor costo acumulado.'
+                'Dijkstra ayudó al detective a\n' +
+                'encontrar la ruta más rápida para\n' +
+                'analizar los hechos y llegar\n' +
+                'directamente hasta Valeria.'
             );
 
             this.mostrarBotonContinuar();
@@ -2632,11 +2691,10 @@ export class GrafoDia extends Phaser.Scene {
                 );
 
                 this.txtAyuda.setText(
-                'Dijkstra halla la ruta de menor costo\n' +
-                'en grafos con pesos positivos. Visita\n' +
-                'siempre el nodo más cercano aún no' +
-                'procesado, garantizando el camino' +
-                'óptimo al llegar a cada nodo.'
+                'Dijkstra ayudó al detective a\n' +
+                'encontrar la ruta más rápida para\n' +
+                'analizar los hechos y llegar\n' +
+                'directamente hasta Valeria.'
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -2764,7 +2822,7 @@ export class GrafoDia extends Phaser.Scene {
 
                     this.txtRecorrido.setText(
                         `Conexiones clave:\n`
-                        + this._listaLimitada(conexiones, 4)
+                        + this._listaEnColumnas(conexiones, 2)
                     );
 
                     this.txtEstadoDinamico.setText(
@@ -2794,15 +2852,14 @@ export class GrafoDia extends Phaser.Scene {
 
                 this.txtRecorrido.setText(
                     `Conexiones clave:\n`
-                    + this._listaLimitada(lista, 4)
+                    + this._listaEnColumnas(lista, 2)
                 );
 
                 this.txtAyuda.setText(
-                    'Prim reconstruye la red mínima del\n' +
-                    ' caso, conectando a todos los\n' +
-                    ' implicados con las relaciones más\n' +
-                    ' directas, revelando la estructura\n' +
-                    ' central de la investigación.'               
+                    'Prim permitió al detective ver\n' +
+                    'la red mínima del caso, revelando\n' +
+                    'las conexiones clave que unen\n' +
+                    'a todos los implicados con Valeria.'           
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -2981,12 +3038,12 @@ export class GrafoDia extends Phaser.Scene {
 
                     lineas.push(
                         `F${index + 1}: ${camino.flujo} | `
-                        + this._rutaCorta(nombres, 4)
+                        + nombres.join(' → ')
                     );
 
                     this.txtRecorrido.setText(
                         `Caminos de impacto:\n`
-                        + this._listaLimitada(lineas, 4)
+                        + lineas.join('\n')
                     );
 
                     this.txtEstadoDinamico.setText(
@@ -3016,11 +3073,10 @@ export class GrafoDia extends Phaser.Scene {
                 );
 
                 this.txtAyuda.setText(
-                    'Ford-Fulkerson mide cuánta influencia\n' +
-                    ' puede llegar a Valeria. Cada camino\n' +
-                    ' encontrado representa una vía por\n' +
-                    ' donde el caso pudo propagarse\n' +
-                    ' hasta afectarla directamente.'
+                    'Ford-Fulkerson mostró al detective\n' +
+                    'cuánta influencia puede llegar\n' +
+                    'a Valeria y por cuáles caminos\n' +
+                    'se propagó el daño hacia ella.'
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -3151,11 +3207,10 @@ export class GrafoDia extends Phaser.Scene {
         );
 
         this.txtAyuda.setText(
-            'BFS y DFS mapean la red de contactos.\n' +
-            ' Dijkstra traza la ruta de acceso,\n' +
-            ' Prim revela las conexiones clave y\n' +
-            ' Ford mide el impacto total sobre\n' +
-            ' Valeria. Todos apuntan al culpable.'
+            'Todos los algoritmos guiaron al\n' +
+            'detective hacia la verdad. BFS,\n' +
+            'DFS, Dijkstra, Prim y Ford juntos\n' +
+            'señalan al culpable detrás del caso.'
         );
 
         this.txtEstadoDinamico.setText(
@@ -3491,7 +3546,7 @@ export class GrafoDia extends Phaser.Scene {
         );
 
     }
-    
+
     irASiguienteDia() {
 
         if (!this.yaPuedeContinuar) return;
