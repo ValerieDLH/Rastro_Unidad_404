@@ -34,6 +34,15 @@ export class CazaRumores extends Phaser.Scene {
         this.arrastrandoVolMini = false;
         this.pointerMoveVolMiniHandler = null;
         this.pointerUpVolMiniHandler = null;
+
+        // RK Game: eje donde reporta las flechitas para volumen.
+        this.RK_AXIS_FLECHAS = 9;
+        this.RK_HAT_IZQUIERDA_MIN = 0.65;
+        this.RK_HAT_IZQUIERDA_MAX = 0.85;
+        this.RK_HAT_DERECHA_MIN = -0.50;
+        this.RK_HAT_DERECHA_MAX = -0.35;
+
+        this.cooldownVolumenMandos = 0;
     }
 
     preload() {
@@ -64,12 +73,68 @@ export class CazaRumores extends Phaser.Scene {
             return;
         }
 
+        this.actualizarVolumenConMandos(time);
+
         if (this.jugadores === 2) {
             this.actualizarJugador(this.jugador1, delta);
             this.actualizarJugador(this.jugador2, delta);
         } else {
             this.actualizarJugador(this.jugador1, delta);
         }
+    }
+
+    actualizarVolumenConMandos(time) {
+        if (time < this.cooldownVolumenMandos) return;
+
+        const direccion = this.leerDireccionVolumenMandos();
+
+        if (direccion === 0) return;
+
+        this._setVolumenMinijuego(this.volumenMinijuegos + direccion * 0.05);
+        this.cooldownVolumenMandos = time + 180;
+    }
+
+    leerDireccionVolumenMandos() {
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const d1 = this.leerDireccionVolumenMando(pad1);
+        const d2 = this.leerDireccionVolumenMando(pad2);
+
+        if (d1 !== 0) return d1;
+        if (d2 !== 0) return d2;
+
+        return 0;
+    }
+
+    leerDireccionVolumenMando(pad) {
+        if (!pad) return 0;
+
+        if (this._esMandoPlayCaza(pad)) {
+            if (this.botonMandoPresionado(pad, 14)) return -1;
+            if (this.botonMandoPresionado(pad, 15)) return 1;
+            return 0;
+        }
+
+        const ejeFlechasRK = this.leerEjeMandoSinDeadzone(pad, this.RK_AXIS_FLECHAS);
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= this.RK_HAT_IZQUIERDA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_IZQUIERDA_MAX;
+
+        const rkDerechaHat =
+            ejeFlechasRK >= this.RK_HAT_DERECHA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_DERECHA_MAX;
+
+        if (rkIzquierdaHat || this.botonMandoPresionado(pad, 14) || this.botonMandoPresionado(pad, 16) || this.botonMandoPresionado(pad, 18)) {
+            return -1;
+        }
+
+        if (rkDerechaHat || this.botonMandoPresionado(pad, 15) || this.botonMandoPresionado(pad, 17) || this.botonMandoPresionado(pad, 19)) {
+            return 1;
+        }
+
+        return 0;
     }
 
     crearFondo() {
@@ -146,25 +211,50 @@ export class CazaRumores extends Phaser.Scene {
     }
 
     iniciarMandos() {
-        if (!this.input.gamepad) return;
+        try {
+            if (this.input && this.input.gamepad) {
+                if (typeof this.input.gamepad.start === 'function') {
+                    this.input.gamepad.start();
+                }
 
-        this.input.gamepad.on('connected', (pad) => {
-            console.log('Mando conectado:', pad.index, pad.id);
-        });
+                if (typeof this.input.gamepad.startListeners === 'function') {
+                    this.input.gamepad.startListeners();
+                }
+            }
+        } catch (error) {
+            console.warn('No se pudo iniciar gamepad:', error);
+        }
     }
 
     obtenerMando(jugador = 1) {
-        if (!this.input.gamepad) return null;
+        let pads = [];
 
-        const index = jugador === 2 ? 1 : 0;
-
-        if (typeof this.input.gamepad.getPad === 'function') {
-            return this.input.gamepad.getPad(index);
+        if (navigator.getGamepads) {
+            pads = Array.from(navigator.getGamepads())
+                .filter(pad => pad !== null && pad !== undefined);
         }
 
-        if (this.input.gamepad.gamepads) {
-            return this.input.gamepad.gamepads[index] || null;
+        if (pads.length === 0 && this.input && this.input.gamepad) {
+            const manager = this.input.gamepad;
+
+            if (typeof manager.getAll === 'function') {
+                pads = manager.getAll();
+            } else if (Array.isArray(manager.gamepads)) {
+                pads = manager.gamepads;
+            } else {
+                if (manager.pad1) pads.push(manager.pad1);
+                if (manager.pad2) pads.push(manager.pad2);
+                if (manager.pad3) pads.push(manager.pad3);
+                if (manager.pad4) pads.push(manager.pad4);
+            }
         }
+
+        pads = pads.filter(pad => pad !== null && pad !== undefined);
+
+        if (pads.length === 0) return null;
+
+        if (jugador === 1) return pads[0] || null;
+        if (jugador === 2) return pads[1] || null;
 
         return null;
     }
@@ -185,36 +275,41 @@ export class CazaRumores extends Phaser.Scene {
             };
         }
 
+        // Movimiento únicamente con joystick izquierdo.
         const ejeX = this.leerEjeMando(pad, 0);
         const ejeY = this.leerEjeMando(pad, 1);
 
         return {
             conectado: true,
-
-            izquierda: ejeX < -0.35 || this.botonMandoPresionado(pad, 14),
-            derecha: ejeX > 0.35 || this.botonMandoPresionado(pad, 15),
-            arriba: ejeY < -0.35 || this.botonMandoPresionado(pad, 12),
-            abajo: ejeY > 0.35 || this.botonMandoPresionado(pad, 13),
-
+            izquierda: ejeX < -0.35,
+            derecha: ejeX > 0.35,
+            arriba: ejeY < -0.35,
+            abajo: ejeY > 0.35,
             r2: this.r2Presionado(pad),
-
             ejeX,
             ejeY
         };
     }
 
     leerEjeMando(pad, index) {
-        if (!pad || !pad.axes || !pad.axes[index]) return 0;
+        if (!pad) return 0;
 
-        const eje = pad.axes[index];
         let valor = 0;
 
-        if (typeof eje.getValue === 'function') {
-            valor = eje.getValue();
-        } else if (typeof eje.value === 'number') {
-            valor = eje.value;
-        } else if (typeof eje === 'number') {
-            valor = eje;
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                valor = eje.getValue();
+            } else if (typeof eje.value === 'number') {
+                valor = eje.value;
+            } else if (typeof eje === 'number') {
+                valor = eje;
+            }
+        } else if (index === 0 && pad.leftStick) {
+            valor = pad.leftStick.x || 0;
+        } else if (index === 1 && pad.leftStick) {
+            valor = pad.leftStick.y || 0;
         }
 
         if (Math.abs(valor) < 0.25) return 0;
@@ -223,20 +318,22 @@ export class CazaRumores extends Phaser.Scene {
     }
 
     leerEjeMandoSinDeadzone(pad, index) {
-        if (!pad || !pad.axes || !pad.axes[index]) return 0;
+        if (!pad) return 0;
 
-        const eje = pad.axes[index];
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
 
-        if (typeof eje.getValue === 'function') {
-            return eje.getValue();
-        }
+            if (typeof eje.getValue === 'function') {
+                return eje.getValue();
+            }
 
-        if (typeof eje.value === 'number') {
-            return eje.value;
-        }
+            if (typeof eje.value === 'number') {
+                return eje.value;
+            }
 
-        if (typeof eje === 'number') {
-            return eje;
+            if (typeof eje === 'number') {
+                return eje;
+            }
         }
 
         return 0;
@@ -253,11 +350,32 @@ export class CazaRumores extends Phaser.Scene {
         return presionado || valor > 0.35;
     }
 
-    botonAMandoPresionado(pad) {
+    botonR1MandoPresionado(pad) {
+        if (!pad) return false;
+
+        if (this._esMandoPlayCaza(pad)) {
+            return this.botonMandoPresionado(pad, 5);
+        }
+
+        // En RK Game, R1 puede reportarse como 5 o 7.
         return (
-            this.botonMandoPresionado(pad, 0) ||
             this.botonMandoPresionado(pad, 5) ||
-            this.botonMandoPresionado(pad, 8)
+            this.botonMandoPresionado(pad, 7)
+        );
+    }
+
+    _esMandoPlayCaza(pad) {
+        if (!pad) return false;
+
+        const id = (pad.id || pad.idName || '').toLowerCase();
+
+        return (
+            id.includes('wireless controller') ||
+            id.includes('dualshock') ||
+            id.includes('dualsense') ||
+            id.includes('playstation') ||
+            id.includes('ps4') ||
+            id.includes('ps5')
         );
     }
 
@@ -269,22 +387,28 @@ export class CazaRumores extends Phaser.Scene {
         const pad1 = this.obtenerMando(1);
         const pad2 = this.obtenerMando(2);
 
-        const aPresionado =
-            this.botonAMandoPresionado(pad1) ||
-            this.botonAMandoPresionado(pad2);
+        const r1Presionado =
+            this.botonR1MandoPresionado(pad1) ||
+            this.botonR1MandoPresionado(pad2);
 
-        const aJustDown = aPresionado && !this.aInformeAnterior;
+        const r1JustDown = r1Presionado && !this.aInformeAnterior;
 
-        if (aJustDown) {
+        if (r1JustDown) {
             this.continuarInformeFinal();
         }
 
-        this.aInformeAnterior = aPresionado;
+        this.aInformeAnterior = r1Presionado;
     }
 
     r2Presionado(pad) {
         if (!pad) return false;
 
+        if (this._esMandoPlayCaza(pad)) {
+            // PlayStation: R2 = botón 7.
+            return this.botonMandoPresionado(pad, 7);
+        }
+
+        // RK Game: R2 suele reportarse como botón 9 en tu código original.
         return this.botonMandoPresionado(pad, 9);
     }
 
@@ -298,7 +422,7 @@ export class CazaRumores extends Phaser.Scene {
             miraY: 370,
             color: 0x7bb8ff,
             titulo: 'JUGADOR 1',
-            ayuda: 'Lee las dos tarjetas rojas. Dispara solo al rumor dañino.  •  F, ENTER o R2 dispara',
+            ayuda: 'Mueve con WASD/flechas o joystick. Dispara con F o R2',
             mensajes: this.obtenerMensajesJugador1()
         });
 
@@ -320,7 +444,7 @@ export class CazaRumores extends Phaser.Scene {
             miraY: 370,
             color: 0x7bb8ff,
             titulo: 'JUGADOR 1',
-            ayuda: 'Lee las dos tarjetas. Dispara solo al rumor dañino.  •  F o R2 dispara',
+            ayuda: 'Mueve con WASD o joystick. Dispara con F o R2',
             mensajes: this.obtenerMensajesJugador1()
         });
 
@@ -333,7 +457,7 @@ export class CazaRumores extends Phaser.Scene {
             miraY: 370,
             color: 0xff9a8c,
             titulo: 'JUGADOR 2',
-            ayuda: 'Lee las dos tarjetas. Dispara solo al rumor dañino.  •  ENTER o R2 dispara',
+            ayuda: 'Mueve con flechas o joystick. Dispara con Enter o R2',
             mensajes: this.obtenerMensajesJugador2()
         });
 
@@ -769,20 +893,28 @@ export class CazaRumores extends Phaser.Scene {
         const mando = this.leerMando(jugador.numero);
         const r2JustDown = mando.r2 && !jugador.r2PresionadoAntes;
 
-        if (jugador.numero === 1) {
-            if (Phaser.Input.Keyboard.JustDown(this.keys.F) || r2JustDown) {
-                this.disparar(jugador);
+        let tecladoJustDown = false;
+
+        if (this.jugadores === 1) {
+            // Modo 1 jugador:
+            // Jugador 1 dispara con F
+            tecladoJustDown = Phaser.Input.Keyboard.JustDown(this.keys.F);
+        } else {
+            // Modo 2 jugadores:
+            // Jugador 1 dispara con F
+            // Jugador 2 dispara con Enter
+            if (jugador.numero === 1) {
+                tecladoJustDown = Phaser.Input.Keyboard.JustDown(this.keys.F);
             }
 
-            if (this.jugadores === 1 && Phaser.Input.Keyboard.JustDown(this.keys.ENTER)) {
-                this.disparar(jugador);
+            if (jugador.numero === 2) {
+                tecladoJustDown = Phaser.Input.Keyboard.JustDown(this.keys.ENTER);
             }
         }
 
-        if (jugador.numero === 2) {
-            if (Phaser.Input.Keyboard.JustDown(this.keys.ENTER) || r2JustDown) {
-                this.disparar(jugador);
-            }
+        // Disparo con R2 del mando correspondiente o con teclado
+        if (r2JustDown || tecladoJustDown) {
+            this.disparar(jugador);
         }
 
         jugador.r2PresionadoAntes = mando.r2;
@@ -796,25 +928,51 @@ export class CazaRumores extends Phaser.Scene {
         let dy = 0;
 
         if (this.jugadores === 1) {
-            if (this.keys.A.isDown || this.cursors.left.isDown || mando.izquierda) dx -= 1;
-            if (this.keys.D.isDown || this.cursors.right.isDown || mando.derecha) dx += 1;
-            if (this.keys.W.isDown || this.cursors.up.isDown || mando.arriba) dy -= 1;
-            if (this.keys.S.isDown || this.cursors.down.isDown || mando.abajo) dy += 1;
+            // 1 jugador:
+            // Teclado: WASD o flechas
+            // Mando: joystick
+            if (this.keys.A.isDown || this.cursors.left.isDown) dx -= 1;
+            if (this.keys.D.isDown || this.cursors.right.isDown) dx += 1;
+            if (this.keys.W.isDown || this.cursors.up.isDown) dy -= 1;
+            if (this.keys.S.isDown || this.cursors.down.isDown) dy += 1;
+
+            if (mando.izquierda) dx -= 1;
+            if (mando.derecha) dx += 1;
+            if (mando.arriba) dy -= 1;
+            if (mando.abajo) dy += 1;
         } else if (jugador.numero === 1) {
-            if (this.keys.A.isDown || mando.izquierda) dx -= 1;
-            if (this.keys.D.isDown || mando.derecha) dx += 1;
-            if (this.keys.W.isDown || mando.arriba) dy -= 1;
-            if (this.keys.S.isDown || mando.abajo) dy += 1;
+            // Jugador 1:
+            // Teclado: WASD
+            // Mando 1: joystick
+            if (this.keys.A.isDown) dx -= 1;
+            if (this.keys.D.isDown) dx += 1;
+            if (this.keys.W.isDown) dy -= 1;
+            if (this.keys.S.isDown) dy += 1;
+
+            if (mando.izquierda) dx -= 1;
+            if (mando.derecha) dx += 1;
+            if (mando.arriba) dy -= 1;
+            if (mando.abajo) dy += 1;
         } else {
-            if (this.cursors.left.isDown || mando.izquierda) dx -= 1;
-            if (this.cursors.right.isDown || mando.derecha) dx += 1;
-            if (this.cursors.up.isDown || mando.arriba) dy -= 1;
-            if (this.cursors.down.isDown || mando.abajo) dy += 1;
+            // Jugador 2:
+            // Teclado: flechas
+            // Mando 2: joystick
+            if (this.cursors.left.isDown) dx -= 1;
+            if (this.cursors.right.isDown) dx += 1;
+            if (this.cursors.up.isDown) dy -= 1;
+            if (this.cursors.down.isDown) dy += 1;
+
+            if (mando.izquierda) dx -= 1;
+            if (mando.derecha) dx += 1;
+            if (mando.arriba) dy -= 1;
+            if (mando.abajo) dy += 1;
         }
 
-        if (dx !== 0 && dy !== 0) {
-            dx *= 0.7071;
-            dy *= 0.7071;
+        const magnitud = Math.sqrt(dx * dx + dy * dy);
+
+        if (magnitud > 1) {
+            dx /= magnitud;
+            dy /= magnitud;
         }
 
         jugador.miraX = Phaser.Math.Clamp(
@@ -1432,6 +1590,7 @@ export class CazaRumores extends Phaser.Scene {
 
         zone.on('pointerdown', continuar);
     }
+
     cargarAudioMinijuego() {
         if (!this.cache.audio.exists('musicaMinijuegos')) {
             this.load.audio('musicaMinijuegos', 'music/Minijuegos.mp3');

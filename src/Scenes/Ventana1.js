@@ -28,6 +28,14 @@ export class Ventana1 extends Phaser.Scene {
 
         this.vidasDiaActual = typeof data.vidasDiaActual === 'number' ? data.vidasDiaActual : 4;
         this.penalizacionDia = typeof data.penalizacionDia === 'number' ? data.penalizacionDia : 0;
+        this.puntajeDia = data.puntajeDia || data.siguienteEstado?.puntajeDia || {
+            total: 0,
+            totalBruto: 0,
+            bonusMinijuego: 0,
+            detalleDias: []
+        };
+
+        this.siguienteEstado = data.siguienteEstado || {};
 
         if (this.diaActual >= 7) {
             this.diaActual = 7;
@@ -39,6 +47,33 @@ export class Ventana1 extends Phaser.Scene {
         }
 
         this.rkModoActivo = false;
+        this.cabecillaElegida = data.cabecillaElegida || null;
+        this.cabecillaCorrecto =
+            data.cabecillaCorrecto ||
+            data.siguienteEstado?.cabecillaCorrecto ||
+            null;
+
+        this.penalizacionesCabecillaDia6 =
+            typeof data.penalizacionesCabecillaDia6 === 'number'
+                ? data.penalizacionesCabecillaDia6
+                : 0;
+        this.modoSeleccionCabecillaDia6 = false;
+        this.indiceCabecillaDia6 = 0;
+        this.itemsCabecillaDia6 = [];
+        this.listaCabecillasDia6 = [];
+        this.scrollDia6Cabecilla = null;
+        this.rkDia6Anterior = null;
+        this.rkDia6Teclas = null;
+        this.rkEstadosAnterioresPorPad = {};
+        this.RK_AXIS_FLECHAS = 9;
+        this.RK_HAT_IZQUIERDA_MIN = 0.65;
+        this.RK_HAT_IZQUIERDA_MAX = 0.85;
+        this.RK_HAT_DERECHA_MIN = -0.50;
+        this.RK_HAT_DERECHA_MAX = -0.35;
+
+        this.cooldownVolumenDia6Mandos = 0;
+        this.rkDia6JoystickAnteriorPorPad = {};
+        this.cooldownVolumenVentanaMandos = 0;
     }
 
     preload() {
@@ -245,6 +280,11 @@ export class Ventana1 extends Phaser.Scene {
     }
 
     update() {
+        if (this.modoSeleccionCabecillaDia6) {
+            this.actualizarRKSeleccionCabecillaDia6();
+            return;
+        }
+
         this.actualizarRKVentanaDirecto();
     }
 
@@ -264,9 +304,14 @@ export class Ventana1 extends Phaser.Scene {
     // PANTALLA DÍA 6
     // ─────────────────────────────────────────────────────────
     crearPantallaDia6() {
+        this.modoSeleccionCabecillaDia6 = true;
+        this.indiceCabecillaDia6 = 0;
+        this.cabecillaElegida = null;
+        this.itemsCabecillaDia6 = [];
+
         this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.55).setDepth(1);
 
-        this.add.text(640, 38, 'DÍA 6 — CASO CERRADO', {
+        this.add.text(640, 38, 'DÍA 6 — ELIGE AL CABECILLA', {
             fontFamily: '"VT323", monospace',
             fontSize: '46px',
             color: '#ffffff',
@@ -274,7 +319,7 @@ export class Ventana1 extends Phaser.Scene {
             strokeThickness: 6
         }).setOrigin(0.5).setDepth(10);
 
-        this.add.text(640, 76, 'Estas son todas las personas que cometieron delitos contra Valeria', {
+        this.add.text(640, 76, 'Selecciona quién fue la mente principal detrás del ataque contra Valeria', {
             fontFamily: '"VT323", monospace',
             fontSize: '22px',
             color: '#d7e6ff'
@@ -282,49 +327,64 @@ export class Ventana1 extends Phaser.Scene {
 
         this.add.rectangle(640, 98, 1200, 2, 0x5ea2ff, 0.8).setDepth(10);
 
-        this._iniciarMusicaDia6o7('musicaDia6');
 
         const lista = Array.isArray(implicadosTotales) ? implicadosTotales : [];
+        this.listaCabecillasDia6 = lista;
+
         this._crearScrollDia6(lista);
 
-        const btnCont = this.add.rectangle(640, 682, 280, 46, 0x2d82ff, 1).setDepth(15);
-        btnCont.setStrokeStyle(3, 0xffffff, 1);
+        this.btnConfirmarCabecilla = this.add.rectangle(640, 682, 340, 46, 0x2d82ff, 1).setDepth(15);
+        this.btnConfirmarCabecilla.setStrokeStyle(3, 0xffffff, 1);
 
-        this.add.text(640, 682, 'CONTINUAR  [R1]', {
+        this.btnConfirmarCabecillaTxt = this.add.text(640, 682, 'CONFIRMAR CABECILLA', {
             fontFamily: '"VT323", monospace',
-            fontSize: '26px',
+            fontSize: '25px',
             color: '#ffffff',
             stroke: '#071021',
             strokeThickness: 4
         }).setOrigin(0.5).setDepth(16);
 
-        const zoneCont = this.add.zone(640, 682, 280, 46).setDepth(17).setInteractive({ cursor: 'pointer' });
-        zoneCont.on('pointerover', () => btnCont.setFillStyle(0x4b9bff, 1));
-        zoneCont.on('pointerout', () => btnCont.setFillStyle(0x2d82ff, 1));
+        const zoneCont = this.add.zone(640, 682, 340, 46).setDepth(17).setInteractive({ cursor: 'pointer' });
+
+        zoneCont.on('pointerover', () => {
+            this.btnConfirmarCabecilla.setFillStyle(0x4b9bff, 1);
+        });
+
+        zoneCont.on('pointerout', () => {
+            this.btnConfirmarCabecilla.setFillStyle(0x2d82ff, 1);
+        });
+
         zoneCont.on('pointerdown', () => {
-            if (this.yaTransicionando) return;
-            this.reproducirClick();
-            this._irADia7();
+            this._confirmarCabecillaDia6();
         });
 
         this.backBtn = this.add.image(85, 40, 'back').setDepth(20).setScale(0.20);
+
         const backZone = this.add.zone(85, 40, 140, 50).setDepth(21).setInteractive({ cursor: 'pointer' });
+
         backZone.on('pointerdown', () => {
             if (this.yaTransicionando) return;
+
             this.reproducirClick();
             this.irAStart();
         });
 
-        this.add.text(640, 706, 'L1 = Volver  |  R1 = Continuar', {
-            fontFamily: '"VT323", monospace',
-            fontSize: '18px',
-            color: '#8dff9c'
-        }).setOrigin(0.5).setDepth(16);
+        this.textoAyudaCabecilla = this.add.text(
+            640,
+            706,
+            'RK Game: flechas/stick para moverte  |  A para elegir  |  R1 para confirmar  |  L1 para volver',
+            {
+                fontFamily: '"VT323", monospace',
+                fontSize: '17px',
+                color: '#8dff9c'
+            }
+        ).setOrigin(0.5).setDepth(16);
 
-        this._iniciarRKDia6o7(
-            () => { if (!this.yaTransicionando) { this.reproducirClick(); this._irADia7(); } },
-            () => { if (!this.yaTransicionando) { this.reproducirClick(); this.irAStart(); } }
-        );
+        this._iniciarRKSeleccionCabecillaDia6();
+
+        if (this.listaCabecillasDia6.length > 0) {
+            this._enfocarCabecillaDia6(0);
+        }
     }
 
     _crearScrollDia6(lista) {
@@ -336,14 +396,32 @@ export class Ventana1 extends Phaser.Scene {
         const maskG = this.make.graphics({ x: 0, y: 0, add: false });
         maskG.fillStyle(0xffffff, 1);
         maskG.fillRect(areaX, areaY, areaW, areaH);
+
         const mask = maskG.createGeometryMask();
 
         const container = this.add.container(0, 0).setDepth(10);
         container.setMask(mask);
 
-        const trackBg = this.add.rectangle(areaX + areaW + 14, areaY + areaH / 2, 10, areaH, 0x24407c, 1).setDepth(14);
+        const trackBg = this.add.rectangle(
+            areaX + areaW + 14,
+            areaY + areaH / 2,
+            10,
+            areaH,
+            0x24407c,
+            1
+        ).setDepth(14);
+
         trackBg.setStrokeStyle(1, 0x7ea8ff, 1);
-        const knob = this.add.rectangle(areaX + areaW + 14, areaY + 40, 18, 80, 0xdce8ff, 1).setDepth(15);
+
+        const knob = this.add.rectangle(
+            areaX + areaW + 14,
+            areaY + 40,
+            18,
+            80,
+            0xdce8ff,
+            1
+        ).setDepth(15);
+
         knob.setStrokeStyle(2, 0xffffff, 1);
 
         const cols = 5;
@@ -354,9 +432,12 @@ export class Ventana1 extends Phaser.Scene {
         const startX = areaX + 30;
         const startY = areaY + 16;
 
+        this.itemsCabecillaDia6 = [];
+
         lista.forEach((pj, idx) => {
             const col = idx % cols;
             const row = Math.floor(idx / cols);
+
             const cx = startX + col * (cardW + gapX) + cardW / 2;
             const cy = startY + row * (cardH + gapY) + cardH / 2;
 
@@ -364,78 +445,682 @@ export class Ventana1 extends Phaser.Scene {
             bg.setStrokeStyle(2, 0x4a6faa, 1);
 
             const key = `pj_${this._normalizarNombre(pj.nombre || '')}`;
+
             let avatar;
+
             if (this.textures.exists(key)) {
                 avatar = this.add.image(cx - 70, cy, key).setDisplaySize(68, 68);
             } else {
                 avatar = this.add.circle(cx - 70, cy, 34, 0x2d4b7e, 1);
-                this.add.text(cx - 70, cy, (pj.nombre || '?').charAt(0).toUpperCase(), {
-                    fontFamily: '"VT323", monospace', fontSize: '28px', color: '#fff'
+
+                const inicial = this.add.text(cx - 70, cy, (pj.nombre || '?').charAt(0).toUpperCase(), {
+                    fontFamily: '"VT323", monospace',
+                    fontSize: '28px',
+                    color: '#ffffff'
                 }).setOrigin(0.5);
+
+                container.add(inicial);
             }
 
             const nomTxt = this.add.text(cx + 10, cy - 28, pj.nombre || '?', {
                 fontFamily: '"VT323", monospace',
                 fontSize: '20px',
                 color: '#ffffff',
-                wordWrap: { width: 130 }
-            }).setOrigin(0.5);
-
-            const delTxt = this.add.text(cx + 10, cy + 8, pj.tipoDelito || pj.sancion?.nombre || 'Delito digital', {
-                fontFamily: '"VT323", monospace',
-                fontSize: '14px',
-                color: '#ffb4bc',
                 wordWrap: { width: 130 },
                 align: 'center'
             }).setOrigin(0.5);
 
+            const delTxt = this.add.text(
+                cx + 10,
+                cy + 8,
+                pj.tipoDelito || pj.sancion?.nombre || 'Delito digital',
+                {
+                    fontFamily: '"VT323", monospace',
+                    fontSize: '14px',
+                    color: '#ffb4bc',
+                    wordWrap: { width: 130 },
+                    align: 'center'
+                }
+            ).setOrigin(0.5);
+
             const badge = this.add.rectangle(cx + 10, cy + 44, 110, 18, 0xb12738, 1);
+
             const badgeTxt = this.add.text(cx + 10, cy + 44, 'CULPABLE', {
-                fontFamily: '"VT323", monospace', fontSize: '13px', color: '#fff'
+                fontFamily: '"VT323", monospace',
+                fontSize: '13px',
+                color: '#fff'
             }).setOrigin(0.5);
 
-            container.add([bg, avatar, nomTxt, delTxt, badge, badgeTxt]);
+            const marcoSel = this.add.rectangle(cx, cy, cardW + 10, cardH + 10, 0xffffff, 0);
+            marcoSel.setStrokeStyle(4, 0xffd75a, 1);
+            marcoSel.setVisible(false);
+
+            const zone = this.add.zone(cx, cy, cardW, cardH).setInteractive({ cursor: 'pointer' });
+
+            zone.on('pointerover', () => {
+                this._enfocarCabecillaDia6(idx);
+            });
+
+            zone.on('pointerdown', () => {
+                this.reproducirClick();
+                this._seleccionarCabecillaDia6(idx);
+            });
+
+            container.add([
+                bg,
+                avatar,
+                nomTxt,
+                delTxt,
+                badge,
+                badgeTxt,
+                marcoSel,
+                zone
+            ]);
+
+            this.itemsCabecillaDia6.push({
+                pj,
+                index: idx,
+                row,
+                col,
+                x: cx,
+                y: cy,
+                bg,
+                marcoSel,
+                zone,
+                cardTop: cy - cardH / 2,
+                cardBottom: cy + cardH / 2
+            });
         });
 
         const filas = Math.ceil(lista.length / cols);
         const contentH = filas * (cardH + gapY) + 20;
         const maxScroll = Math.max(0, contentH - areaH);
-        let offset = 0;
+
+        this.scrollDia6Cabecilla = {
+            areaY,
+            areaH,
+            areaX,
+            areaW,
+            container,
+            knob,
+            offset: 0,
+            maxScroll
+        };
 
         const actualizarKnob = () => {
-            if (maxScroll <= 0) { knob.setAlpha(0.3); return; }
+            if (maxScroll <= 0) {
+                knob.setAlpha(0.3);
+                return;
+            }
+
             const minY = areaY + 40;
             const maxY = areaY + areaH - 40;
-            knob.y = Phaser.Math.Linear(minY, maxY, offset / maxScroll);
+
+            knob.y = Phaser.Math.Linear(minY, maxY, this.scrollDia6Cabecilla.offset / maxScroll);
         };
+
+        this.scrollDia6Cabecilla.actualizarKnob = actualizarKnob;
 
         actualizarKnob();
 
         this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+            if (!this.modoSeleccionCabecillaDia6) return;
             if (maxScroll <= 0) return;
-            offset = Phaser.Math.Clamp(offset + deltaY * 0.8, 0, maxScroll);
-            container.y = -offset;
+
+            this.scrollDia6Cabecilla.offset = Phaser.Math.Clamp(
+                this.scrollDia6Cabecilla.offset + deltaY * 0.8,
+                0,
+                maxScroll
+            );
+
+            container.y = -this.scrollDia6Cabecilla.offset;
             actualizarKnob();
         });
     }
 
+    _enfocarCabecillaDia6(index) {
+        if (!this.itemsCabecillaDia6 || this.itemsCabecillaDia6.length === 0) return;
+
+        this.indiceCabecillaDia6 = Phaser.Math.Clamp(
+            index,
+            0,
+            this.itemsCabecillaDia6.length - 1
+        );
+
+        this._actualizarVisualCabecillaDia6();
+        this._asegurarCabecillaVisibleDia6();
+    }
+
+    _seleccionarCabecillaDia6(index) {
+        this._enfocarCabecillaDia6(index);
+
+        const item = this.itemsCabecillaDia6[this.indiceCabecillaDia6];
+
+        if (!item) return;
+
+        this.cabecillaElegida = item.pj;
+
+        this._actualizarVisualCabecillaDia6();
+
+        this._mostrarAvisoDia6(
+            `Cabecilla seleccionado: ${item.pj.nombre}`,
+            0x173250,
+            0x6ea1ef
+        );
+    }
+
+    _actualizarVisualCabecillaDia6() {
+        if (!this.itemsCabecillaDia6) return;
+
+        this.itemsCabecillaDia6.forEach((item, index) => {
+            const enfocado = index === this.indiceCabecillaDia6;
+            const seleccionado =
+                this.cabecillaElegida &&
+                item.pj &&
+                this.cabecillaElegida.nombre === item.pj.nombre;
+
+            if (seleccionado) {
+                item.bg.setFillStyle(0x355f3a, 0.96);
+                item.bg.setStrokeStyle(3, 0x8dff9c, 1);
+                item.marcoSel.setStrokeStyle(5, 0x8dff9c, 1);
+                item.marcoSel.setVisible(true);
+                return;
+            }
+
+            if (enfocado) {
+                item.bg.setFillStyle(0x1d376b, 0.96);
+                item.bg.setStrokeStyle(3, 0xffd75a, 1);
+                item.marcoSel.setStrokeStyle(4, 0xffd75a, 1);
+                item.marcoSel.setVisible(true);
+                return;
+            }
+
+            item.bg.setFillStyle(0x0f1633, 0.9);
+            item.bg.setStrokeStyle(2, 0x4a6faa, 1);
+            item.marcoSel.setVisible(false);
+        });
+    }
+
+    _asegurarCabecillaVisibleDia6() {
+        if (!this.scrollDia6Cabecilla) return;
+
+        const item = this.itemsCabecillaDia6[this.indiceCabecillaDia6];
+
+        if (!item) return;
+
+        const s = this.scrollDia6Cabecilla;
+        const margen = 18;
+
+        const visibleTop = s.offset + s.areaY;
+        const visibleBottom = s.offset + s.areaY + s.areaH;
+
+        let nuevoOffset = s.offset;
+
+        if (item.cardTop - margen < visibleTop) {
+            nuevoOffset = item.cardTop - margen - s.areaY;
+        }
+
+        if (item.cardBottom + margen > visibleBottom) {
+            nuevoOffset = item.cardBottom + margen - s.areaY - s.areaH;
+        }
+
+        nuevoOffset = Phaser.Math.Clamp(nuevoOffset, 0, s.maxScroll);
+
+        s.offset = nuevoOffset;
+        s.container.y = -s.offset;
+
+        if (typeof s.actualizarKnob === 'function') {
+            s.actualizarKnob();
+        }
+    }
+    _confirmarCabecillaDia6() {
+        if (this.yaTransicionando) return;
+
+        if (!this.cabecillaElegida) {
+            this._mostrarAvisoDia6(
+                'Primero elige quién fue el cabecilla.',
+                0x4a2a2a,
+                0xc97a7a
+            );
+            return;
+        }
+
+        const nombreElegido = this._normalizarNombre(this.cabecillaElegida.nombre || '');
+        const nombreCorrecto = this._normalizarNombre(this.cabecillaCorrecto?.nombre || '');
+
+        if (nombreCorrecto && nombreElegido !== nombreCorrecto) {
+            this._penalizarCabecillaIncorrectoDia6();
+
+            this._mostrarAvisoDia6(
+                `Cabecilla incorrecto. Revisa la conclusión del Día 5.\nPista: busca a la persona clave del análisis final.`,
+                0x4a2a2a,
+                0xc97a7a
+            );
+
+            return;
+        }
+
+        this.reproducirClick();
+
+        this._mostrarAvisoDia6(
+            `Correcto. El cabecilla era ${this.cabecillaElegida.nombre}.`,
+            0x173250,
+            0x8dff9c
+        );
+
+        this.time.delayedCall(650, () => {
+            this._irADia7();
+        });
+    }
+
+    _penalizarCabecillaIncorrectoDia6() {
+        const penalizacion = 50;
+
+        this.penalizacionesCabecillaDia6 =
+            (this.penalizacionesCabecillaDia6 || 0) + penalizacion;
+
+        const puntajeAnterior = this.puntajeDia || {
+            total: 0,
+            totalBruto: 0,
+            bonusMinijuego: 0,
+            detalleDias: []
+        };
+
+        const totalAnterior =
+            typeof puntajeAnterior.total === 'number'
+                ? puntajeAnterior.total
+                : 0;
+
+        this.puntajeDia = {
+            ...puntajeAnterior,
+            total: Math.max(0, totalAnterior - penalizacion),
+            penalizacionCabecillaDia6: this.penalizacionesCabecillaDia6,
+            detalleDias: [
+                ...(Array.isArray(puntajeAnterior.detalleDias)
+                    ? puntajeAnterior.detalleDias
+                    : []),
+                {
+                    dia: 6,
+                    tipo: 'cabecilla_incorrecto',
+                    elegido: this.cabecillaElegida?.nombre || 'No definido',
+                    correcto: this.cabecillaCorrecto?.nombre || 'No definido',
+                    penalizacion
+                }
+            ]
+        };
+    }
+
+    _mostrarAvisoDia6(texto, colorFondo = 0x173250, colorBorde = 0x6ea1ef) {
+        if (this.avisoDia6Bg) {
+            this.avisoDia6Bg.destroy();
+            this.avisoDia6Bg = null;
+        }
+
+        if (this.avisoDia6Txt) {
+            this.avisoDia6Txt.destroy();
+            this.avisoDia6Txt = null;
+        }
+
+        this.avisoDia6Bg = this.add.rectangle(640, 628, 620, 44, colorFondo, 0.96).setDepth(30);
+        this.avisoDia6Bg.setStrokeStyle(2, colorBorde, 1);
+
+        this.avisoDia6Txt = this.add.text(640, 628, texto, {
+            fontFamily: '"VT323", monospace',
+            fontSize: '23px',
+            color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: 580 }
+        }).setOrigin(0.5).setDepth(31);
+
+        this.time.delayedCall(1200, () => {
+            if (this.avisoDia6Bg) {
+                this.avisoDia6Bg.destroy();
+                this.avisoDia6Bg = null;
+            }
+
+            if (this.avisoDia6Txt) {
+                this.avisoDia6Txt.destroy();
+                this.avisoDia6Txt = null;
+            }
+        });
+    }
+
+    _iniciarRKSeleccionCabecillaDia6() {
+        this.rkDia6Anterior = {
+            l1: false,
+            r1: false,
+            a: false,
+            arriba: false,
+            abajo: false,
+            izquierda: false,
+            derecha: false
+        };
+
+        this.rkDia6Teclas = this.input.keyboard.addKeys({
+            UP: Phaser.Input.Keyboard.KeyCodes.UP,
+            DOWN: Phaser.Input.Keyboard.KeyCodes.DOWN,
+            LEFT: Phaser.Input.Keyboard.KeyCodes.LEFT,
+            RIGHT: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+            W: Phaser.Input.Keyboard.KeyCodes.W,
+            S: Phaser.Input.Keyboard.KeyCodes.S,
+            A: Phaser.Input.Keyboard.KeyCodes.A,
+            D: Phaser.Input.Keyboard.KeyCodes.D,
+            ENTER: Phaser.Input.Keyboard.KeyCodes.ENTER,
+            R: Phaser.Input.Keyboard.KeyCodes.R,
+            ESC: Phaser.Input.Keyboard.KeyCodes.ESC
+        });
+    }
+
+    actualizarRKSeleccionCabecillaDia6() {
+        if (!this.modoSeleccionCabecillaDia6 || this.yaTransicionando) return;
+
+        this.actualizarVolumenDia6ConMandos();
+
+        const entrada = this.leerInputTodosLosMandosVentana();
+        const estadoCompleto = entrada.estado;
+        const justDownCompleto = entrada.justDown;
+
+        const joystickDia6 = this.leerJoystickDia6TodosLosMandos();
+
+        const t = this.rkDia6Teclas || {};
+
+        const arribaKey =
+            Phaser.Input.Keyboard.JustDown(t.UP) ||
+            Phaser.Input.Keyboard.JustDown(t.W);
+
+        const abajoKey =
+            Phaser.Input.Keyboard.JustDown(t.DOWN) ||
+            Phaser.Input.Keyboard.JustDown(t.S);
+
+        const izquierdaKey =
+            Phaser.Input.Keyboard.JustDown(t.LEFT) ||
+            Phaser.Input.Keyboard.JustDown(t.A);
+
+        const derechaKey =
+            Phaser.Input.Keyboard.JustDown(t.RIGHT) ||
+            Phaser.Input.Keyboard.JustDown(t.D);
+
+        const seleccionarKey =
+            Phaser.Input.Keyboard.JustDown(t.ENTER);
+
+        const confirmarKey =
+            Phaser.Input.Keyboard.JustDown(t.R);
+
+        const volverKey =
+            Phaser.Input.Keyboard.JustDown(t.ESC);
+
+        const arribaJustDown = arribaKey || joystickDia6.justDown.arriba;
+        const abajoJustDown = abajoKey || joystickDia6.justDown.abajo;
+        const izquierdaJustDown = izquierdaKey || joystickDia6.justDown.izquierda;
+        const derechaJustDown = derechaKey || joystickDia6.justDown.derecha;
+
+        const aJustDown = seleccionarKey || justDownCompleto.a;
+        const r1JustDown = confirmarKey || justDownCompleto.r1;
+        const l1JustDown = volverKey || justDownCompleto.l1;
+
+        const cols = 5;
+
+        if (izquierdaJustDown) {
+            this.reproducirClick();
+            this._enfocarCabecillaDia6(this.indiceCabecillaDia6 - 1);
+        }
+
+        if (derechaJustDown) {
+            this.reproducirClick();
+            this._enfocarCabecillaDia6(this.indiceCabecillaDia6 + 1);
+        }
+
+        if (arribaJustDown) {
+            this.reproducirClick();
+            this._enfocarCabecillaDia6(this.indiceCabecillaDia6 - cols);
+        }
+
+        if (abajoJustDown) {
+            this.reproducirClick();
+            this._enfocarCabecillaDia6(this.indiceCabecillaDia6 + cols);
+        }
+
+        if (aJustDown) {
+            this.reproducirClick();
+            this._seleccionarCabecillaDia6(this.indiceCabecillaDia6);
+        }
+
+        if (r1JustDown) {
+            this._confirmarCabecillaDia6();
+            return;
+        }
+
+        if (l1JustDown) {
+            this.reproducirClick();
+            this.irAStart();
+            return;
+        }
+
+        this.rkDia6Anterior = {
+            l1: estadoCompleto.l1,
+            r1: estadoCompleto.r1,
+            a: estadoCompleto.a,
+            arriba: estadoCompleto.arriba,
+            abajo: estadoCompleto.abajo,
+            izquierda: estadoCompleto.izquierda,
+            derecha: estadoCompleto.derecha
+        };
+    }
+
+    leerJoystickDia6TodosLosMandos() {
+        const pads = this.obtenerMandosVentana();
+
+        const estadoFinal = {
+            izquierda: false,
+            derecha: false,
+            arriba: false,
+            abajo: false
+        };
+
+        const justDownFinal = {
+            izquierda: false,
+            derecha: false,
+            arriba: false,
+            abajo: false
+        };
+
+        if (!this.rkDia6JoystickAnteriorPorPad) {
+            this.rkDia6JoystickAnteriorPorPad = {};
+        }
+
+        pads.forEach((pad, index) => {
+            const idPad = this._obtenerIdPadVentana(pad, index);
+
+            const ejeX = this.leerEjeRKVentana(pad, 0);
+            const ejeY = this.leerEjeRKVentana(pad, 1);
+
+            const estadoActual = {
+                izquierda: ejeX < -0.45,
+                derecha: ejeX > 0.45,
+                arriba: ejeY < -0.45,
+                abajo: ejeY > 0.45
+            };
+
+            const estadoAnterior =
+                this.rkDia6JoystickAnteriorPorPad[idPad] || {
+                    izquierda: false,
+                    derecha: false,
+                    arriba: false,
+                    abajo: false
+                };
+
+            Object.keys(estadoFinal).forEach(key => {
+                estadoFinal[key] = estadoFinal[key] || estadoActual[key];
+                justDownFinal[key] =
+                    justDownFinal[key] ||
+                    (estadoActual[key] && !estadoAnterior[key]);
+            });
+
+            this.rkDia6JoystickAnteriorPorPad[idPad] = { ...estadoActual };
+        });
+
+        return {
+            estado: estadoFinal,
+            justDown: justDownFinal
+        };
+    }
+
+    actualizarVolumenDia6ConMandos() {
+        const ahora = this.time.now;
+
+        if (ahora < this.cooldownVolumenDia6Mandos) return;
+
+        const direccion = this.leerDireccionVolumenDia6Mandos();
+
+        if (direccion === 0) return;
+
+        this._setVolumenDia6DesdeMando(this.volumenActual + direccion * 0.05);
+        this.cooldownVolumenDia6Mandos = ahora + 180;
+    }
+
+    leerDireccionVolumenDia6Mandos() {
+        const pads = this.obtenerMandosVentana();
+
+        for (let i = 0; i < pads.length; i++) {
+            const direccion = this.leerDireccionVolumenDia6Mando(pads[i]);
+
+            if (direccion !== 0) {
+                return direccion;
+            }
+        }
+
+        return 0;
+    }
+
+    leerDireccionVolumenDia6Mando(pad) {
+        if (!pad) return 0;
+
+        if (this._esMandoPlayVentana && this._esMandoPlayVentana(pad)) {
+            if (this.botonRKVentana(pad, 14)) return -1;
+            if (this.botonRKVentana(pad, 15)) return 1;
+            return 0;
+        }
+
+        const ejeFlechasRK = this.leerEjeRKVentanaSinDeadzone(pad, this.RK_AXIS_FLECHAS);
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= this.RK_HAT_IZQUIERDA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_IZQUIERDA_MAX;
+
+        const rkDerechaHat =
+            ejeFlechasRK >= this.RK_HAT_DERECHA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_DERECHA_MAX;
+
+        if (
+            rkIzquierdaHat ||
+            this.botonRKVentana(pad, 14) ||
+            this.botonRKVentana(pad, 16) ||
+            this.botonRKVentana(pad, 18)
+        ) {
+            return -1;
+        }
+
+        if (
+            rkDerechaHat ||
+            this.botonRKVentana(pad, 15) ||
+            this.botonRKVentana(pad, 17) ||
+            this.botonRKVentana(pad, 19)
+        ) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    leerEjeRKVentanaSinDeadzone(pad, index) {
+        if (!pad || !pad.axes || index < 0 || index >= pad.axes.length) return 0;
+
+        const eje = pad.axes[index];
+
+        if (typeof eje === 'number') {
+            return eje;
+        }
+
+        if (eje && typeof eje.getValue === 'function') {
+            return eje.getValue();
+        }
+
+        if (eje && typeof eje.value === 'number') {
+            return eje.value;
+        }
+
+        return 0;
+    }
+
+    _setVolumenDia6DesdeMando(volumen) {
+        volumen = Phaser.Math.Clamp(volumen, 0, 1);
+
+        this._guardarVolumenGlobal(volumen);
+
+        if (this.sonidoVentana) {
+            this.tweens.killTweensOf(this.sonidoVentana);
+            this.sonidoVentana.setVolume(this.volumenActual);
+        }
+
+        if (this.sliderFill) {
+            this.sliderFill.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
+        }
+
+        if (this.sliderGlow) {
+            this.sliderGlow.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
+        }
+
+        if (this.sliderKnob) {
+            const izquierda = this.sliderX - this.sliderWidth / 2;
+            this.sliderKnob.x = izquierda + this.sliderWidth * this.volumenActual;
+        }
+    }
     _irADia7() {
         if (this.yaTransicionando) return;
+
         this.yaTransicionando = true;
+        this.modoSeleccionCabecillaDia6 = false;
 
         this.fadeOutMusica(() => {
             this.cameras.main.fadeOut(420, 0, 0, 0);
+
             this.time.delayedCall(420, () => {
+                this._guardarPartidaActual({
+                    diaActual: 7,
+                    modoSoloFondo: true,
+                    transicionEntrada: true,
+                    volumenActual: this.volumenActual,
+
+                    modoJuego: this.modoJuego,
+                    jugadores: this.jugadores,
+
+                    puntajeDia: this.puntajeDia,
+
+                    delitosEncontrados: this.delitosEncontrados,
+                    estadoBuscadorPorDia: this.estadoBuscadorPorDia,
+                    sancionesAsignadas: this.sancionesAsignadas,
+
+                    cabecillaElegida: this.cabecillaElegida,
+                    cabecillaCorrecto: this.cabecillaCorrecto,
+                    penalizacionesCabecillaDia6: this.penalizacionesCabecillaDia6
+                });
                 this.scene.start('Ventana1', {
                     diaActual: 7,
                     modoSoloFondo: true,
                     transicionEntrada: true,
                     volumenActual: this.volumenActual,
+
                     modoJuego: this.modoJuego,
                     jugadores: this.jugadores,
+
+                    puntajeDia: this.puntajeDia,
+
                     delitosEncontrados: this.delitosEncontrados,
                     estadoBuscadorPorDia: this.estadoBuscadorPorDia,
-                    sancionesAsignadas: this.sancionesAsignadas
+                    sancionesAsignadas: this.sancionesAsignadas,
+                    cabecillaElegida: this.cabecillaElegida,
+                    cabecillaCorrecto: this.cabecillaCorrecto,
+                    penalizacionesCabecillaDia6: this.penalizacionesCabecillaDia6
                 });
             });
         });
@@ -446,8 +1131,6 @@ export class Ventana1 extends Phaser.Scene {
     // ─────────────────────────────────────────────────────────
     crearPantallaFinal() {
         this.add.rectangle(640, 360, 1280, 720, 0x000000, 0.6).setDepth(1);
-
-        this._iniciarMusicaDia6o7('musicaDia7');
 
         const culpablePrincipal = this._obtenerCulpablePrincipal();
 
@@ -535,7 +1218,7 @@ export class Ventana1 extends Phaser.Scene {
         const btnBack = this.add.rectangle(640, 600, 340, 48, 0x2d82ff, 1).setDepth(15);
         btnBack.setStrokeStyle(3, 0xffffff, 1);
 
-        this.add.text(640, 600, 'VOLVER AL INICIO  [R1]', {
+        this.add.text(640, 600, 'GUARDAR PUNTAJE', {
             fontFamily: '"VT323", monospace',
             fontSize: '27px',
             color: '#ffffff',
@@ -547,16 +1230,22 @@ export class Ventana1 extends Phaser.Scene {
         zoneBack.on('pointerover', () => btnBack.setFillStyle(0x4b9bff, 1));
         zoneBack.on('pointerout', () => btnBack.setFillStyle(0x2d82ff, 1));
         zoneBack.on('pointerdown', () => {
-            if (!this.yaTransicionando) { this.reproducirClick(); this.irAStart(); }
+            if (!this.yaTransicionando) {
+                this.reproducirClick();
+                this.irARankingFinal();
+            }
         });
 
         this.backBtn = this.add.image(85, 40, 'back').setDepth(20).setScale(0.20);
         const bz = this.add.zone(85, 40, 140, 50).setDepth(21).setInteractive({ cursor: 'pointer' });
         bz.on('pointerdown', () => {
-            if (!this.yaTransicionando) { this.reproducirClick(); this.irAStart(); }
+            if (!this.yaTransicionando) {
+                this.reproducirClick();
+                this.irARankingFinal();
+            }
         });
 
-        this.add.text(640, 638, 'R1 = Volver al inicio', {
+        this.add.text(640, 638, 'Mandos: R1 para guardar puntaje  |  Click para guardar', {
             fontFamily: '"VT323", monospace',
             fontSize: '18px',
             color: '#8dff9c'
@@ -573,27 +1262,77 @@ export class Ventana1 extends Phaser.Scene {
         }
 
         this._iniciarRKDia6o7(
-            () => { if (!this.yaTransicionando) { this.reproducirClick(); this.irAStart(); } },
-            () => { if (!this.yaTransicionando) { this.reproducirClick(); this.irAStart(); } }
+            () => {
+                if (!this.yaTransicionando) {
+                    this.reproducirClick();
+                    this.irARankingFinal();
+                }
+            },
+            () => {
+                if (!this.yaTransicionando) {
+                    this.reproducirClick();
+                    this.irARankingFinal();
+                }
+            }
         );
     }
+    irARankingFinal() {
+        if (this.yaTransicionando) return;
 
+        this.yaTransicionando = true;
+
+        const puntajeFinal =
+            this.puntajeDia?.total ||
+            this.siguienteEstado?.puntajeDia?.total ||
+            0;
+
+        this.fadeOutMusica(() => {
+            this.cameras.main.fadeOut(420, 0, 0, 0);
+
+            this.time.delayedCall(420, () => {
+                this.scene.start('RankingFinal', {
+                    puntajeDia: this.puntajeDia || {},
+                    puntajeFinal,
+                    siguienteEstado: this.siguienteEstado || {},
+
+                    modoJuego: this.modoJuego,
+                    jugadores: this.jugadores,
+
+                    delitosEncontrados: this.delitosEncontrados,
+                    estadoBuscadorPorDia: this.estadoBuscadorPorDia,
+                    sancionesAsignadas: this.sancionesAsignadas,
+                    cabecillaElegida: this.cabecillaElegida,
+                    cabecillaCorrecto: this.cabecillaCorrecto,
+                    penalizacionesCabecillaDia6: this.penalizacionesCabecillaDia6
+                });
+            });
+        });
+    }
     _obtenerCulpablePrincipal() {
+        if (this.cabecillaElegida) {
+            return this.cabecillaElegida;
+        }
+
         if (Array.isArray(this.delitosEncontrados) && this.delitosEncontrados.length > 0) {
             const frecuencia = {};
+
             this.delitosEncontrados.forEach(pj => {
                 if (!pj || !pj.nombre) return;
                 frecuencia[pj.nombre] = (frecuencia[pj.nombre] || 0) + 1;
             });
+
             const masRepetido = Object.entries(frecuencia).sort((a, b) => b[1] - a[1])[0];
+
             if (masRepetido) {
                 const pj = this.delitosEncontrados.find(p => p.nombre === masRepetido[0]);
                 if (pj) return pj;
             }
         }
+
         if (Array.isArray(implicadosTotales) && implicadosTotales.length > 0) {
             return implicadosTotales[0];
         }
+
         return null;
     }
 
@@ -888,25 +1627,114 @@ export class Ventana1 extends Phaser.Scene {
     crearControlVolumen() {
         this.panelVol = this.add.rectangle(1115, 42, 260, 54, 0x091427, 0.9).setDepth(60);
         this.panelVol.setStrokeStyle(2, 0x78a7ff, 1);
-        this.volLabel = this.add.text(1038, 42, 'VOL', { fontFamily: '"VT323", monospace', fontSize: '26px', color: '#ffffff', stroke: '#09111f', strokeThickness: 3 });
+
+        this.volLabel = this.add.text(1038, 42, 'VOL', {
+            fontFamily: '"VT323", monospace',
+            fontSize: '26px',
+            color: '#ffffff',
+            stroke: '#09111f',
+            strokeThickness: 3
+        });
+
         this.volLabel.setOrigin(0.5).setDepth(61);
-        this.sliderX = 1152; this.sliderY = 42; this.sliderWidth = 135;
-        this.sliderTrack = this.add.rectangle(this.sliderX, this.sliderY, this.sliderWidth, 10, 0x172642, 1).setDepth(61);
+
+        this.sliderX = 1152;
+        this.sliderY = 42;
+        this.sliderWidth = 135;
+
+        this.sliderTrack = this.add.rectangle(
+            this.sliderX,
+            this.sliderY,
+            this.sliderWidth,
+            10,
+            0x172642,
+            1
+        ).setDepth(61);
+
         this.sliderTrack.setStrokeStyle(1, 0x8eb8ff, 1);
-        this.sliderFill = this.add.rectangle(this.sliderX - this.sliderWidth / 2, this.sliderY, Math.max(4, this.sliderWidth * this.volumenActual), 10, 0x66b3ff, 1);
+
+        this.sliderFill = this.add.rectangle(
+            this.sliderX - this.sliderWidth / 2,
+            this.sliderY,
+            Math.max(4, this.sliderWidth * this.volumenActual),
+            10,
+            0x66b3ff,
+            1
+        );
+
         this.sliderFill.setOrigin(0, 0.5).setDepth(62);
-        this.sliderGlow = this.add.rectangle(this.sliderX - this.sliderWidth / 2, this.sliderY, Math.max(4, this.sliderWidth * this.volumenActual), 4, 0xbfe1ff, 0.9);
+
+        this.sliderGlow = this.add.rectangle(
+            this.sliderX - this.sliderWidth / 2,
+            this.sliderY,
+            Math.max(4, this.sliderWidth * this.volumenActual),
+            4,
+            0xbfe1ff,
+            0.9
+        );
+
         this.sliderGlow.setOrigin(0, 0.5).setDepth(63);
-        this.sliderKnob = this.add.circle(this.sliderX - this.sliderWidth / 2 + this.sliderWidth * this.volumenActual, this.sliderY, 11, 0xffffff, 1).setDepth(64);
+
+        this.sliderKnob = this.add.circle(
+            this.sliderX - this.sliderWidth / 2 + this.sliderWidth * this.volumenActual,
+            this.sliderY,
+            11,
+            0xffffff,
+            1
+        ).setDepth(64);
+
         this.sliderKnob.setStrokeStyle(3, 0x2558a8, 1);
-        this.sliderZone = this.add.zone(this.sliderX, this.sliderY, this.sliderWidth + 40, 34).setDepth(65).setInteractive({ cursor: 'pointer' });
-        this.sliderZone.on('pointerdown', (pointer) => { this.arrastrandoVolumen = true; this.actualizarVolumenDesdePointer(pointer.x); });
-        this.sliderZone.on('pointerover', () => { this.sliderKnob.setFillStyle(0xe8f4ff, 1); });
-        this.sliderZone.on('pointerout', () => { if (!this.arrastrandoVolumen) this.sliderKnob.setFillStyle(0xffffff, 1); });
-        if (this.pointerMoveVolHandler) this.input.off('pointermove', this.pointerMoveVolHandler);
-        if (this.pointerUpVolHandler) this.input.off('pointerup', this.pointerUpVolHandler);
-        this.pointerMoveVolHandler = (pointer) => { if (!this.arrastrandoVolumen) return; this.actualizarVolumenDesdePointer(pointer.x); };
-        this.pointerUpVolHandler = () => { this.arrastrandoVolumen = false; if (this.sliderKnob) this.sliderKnob.setFillStyle(0xffffff, 1); };
+
+        this.sliderZone = this.add.zone(
+            this.sliderX,
+            this.sliderY,
+            this.sliderWidth + 40,
+            34
+        );
+
+        this.sliderZone.setDepth(500);
+        this.sliderZone.setInteractive({ cursor: 'pointer' });
+
+        this.sliderZone.on('pointerdown', (pointer) => {
+            if (this.yaTransicionando) return;
+
+            this.arrastrandoVolumen = true;
+            this.actualizarVolumenDesdePointer(pointer.x);
+        });
+
+        this.sliderZone.on('pointerover', () => {
+            if (this.sliderKnob) {
+                this.sliderKnob.setFillStyle(0xe8f4ff, 1);
+            }
+        });
+
+        this.sliderZone.on('pointerout', () => {
+            if (!this.arrastrandoVolumen && this.sliderKnob) {
+                this.sliderKnob.setFillStyle(0xffffff, 1);
+            }
+        });
+
+        if (this.pointerMoveVolHandler) {
+            this.input.off('pointermove', this.pointerMoveVolHandler);
+        }
+
+        if (this.pointerUpVolHandler) {
+            this.input.off('pointerup', this.pointerUpVolHandler);
+        }
+
+        this.pointerMoveVolHandler = (pointer) => {
+            if (!this.arrastrandoVolumen) return;
+            this.actualizarVolumenDesdePointer(pointer.x);
+        };
+
+        this.pointerUpVolHandler = () => {
+            this.arrastrandoVolumen = false;
+
+            if (this.sliderKnob) {
+                this.sliderKnob.setFillStyle(0xffffff, 1);
+            }
+        };
+
         this.input.on('pointermove', this.pointerMoveVolHandler);
         this.input.on('pointerup', this.pointerUpVolHandler);
     }
@@ -922,24 +1750,203 @@ export class Ventana1 extends Phaser.Scene {
         this.sliderGlow.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
         this.sliderKnob.x = izquierda + this.sliderWidth * this.volumenActual;
     }
+    actualizarVolumenVentanaConMandos() {
+        if (this.modalAbierto || this.modalCerrando) return;
+
+        const ahora = this.time.now;
+
+        if (ahora < this.cooldownVolumenVentanaMandos) return;
+
+        const direccion = this.leerDireccionVolumenVentanaMandos();
+
+        if (direccion === 0) return;
+
+        this._setVolumenVentanaDesdeMando(this.volumenActual + direccion * 0.05);
+
+        this.cooldownVolumenVentanaMandos = ahora + 180;
+    }
+
+    leerDireccionVolumenVentanaMandos() {
+        const pads = this.obtenerMandosVentana();
+
+        for (let i = 0; i < pads.length; i++) {
+            const direccion = this.leerDireccionVolumenVentanaMando(pads[i]);
+
+            if (direccion !== 0) {
+                return direccion;
+            }
+        }
+
+        return 0;
+    }
+
+    leerDireccionVolumenVentanaMando(pad) {
+        if (!pad) return 0;
+
+        // PlayStation: solo cruceta izquierda/derecha.
+        // No se usa joystick para volumen.
+        if (this._esMandoPlayVentana && this._esMandoPlayVentana(pad)) {
+            if (this.botonRKVentana(pad, 14)) return -1;
+            if (this.botonRKVentana(pad, 15)) return 1;
+            return 0;
+        }
+
+        // RK Game: flechitas por axis 9.
+        const ejeFlechasRK = this.leerEjeRKVentanaSinDeadzone(
+            pad,
+            this.RK_AXIS_FLECHAS || 9
+        );
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= this.RK_HAT_IZQUIERDA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_IZQUIERDA_MAX;
+
+        const rkDerechaHat =
+            ejeFlechasRK >= this.RK_HAT_DERECHA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_DERECHA_MAX;
+
+        if (
+            rkIzquierdaHat ||
+            this.botonRKVentana(pad, 14) ||
+            this.botonRKVentana(pad, 16) ||
+            this.botonRKVentana(pad, 18)
+        ) {
+            return -1;
+        }
+
+        if (
+            rkDerechaHat ||
+            this.botonRKVentana(pad, 15) ||
+            this.botonRKVentana(pad, 17) ||
+            this.botonRKVentana(pad, 19)
+        ) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    _setVolumenVentanaDesdeMando(volumen) {
+        volumen = Phaser.Math.Clamp(volumen, 0, 1);
+
+        this._guardarVolumenGlobal(volumen);
+
+        if (this.sonidoVentana) {
+            this.tweens.killTweensOf(this.sonidoVentana);
+            this.sonidoVentana.setVolume(this.volumenActual);
+        }
+
+        if (this.sliderFill) {
+            this.sliderFill.displayWidth = Math.max(
+                4,
+                this.sliderWidth * this.volumenActual
+            );
+        }
+
+        if (this.sliderGlow) {
+            this.sliderGlow.displayWidth = Math.max(
+                4,
+                this.sliderWidth * this.volumenActual
+            );
+        }
+
+        if (this.sliderKnob) {
+            const izquierda = this.sliderX - this.sliderWidth / 2;
+            this.sliderKnob.x = izquierda + this.sliderWidth * this.volumenActual;
+        }
+    }
 
     _calcularPuntajeDia() {
         const personajes = this.personajesDia || [];
-        let clasificacionesCorrectas = 0, sancionesCorrectas = 0;
+
+        let clasificacionesCorrectas = 0;
+        let sancionesCorrectas = 0;
+
         personajes.forEach((pj) => {
             const decision = this._obtenerDecisionDiaActual(pj);
-            const clasificacionBien = (pj.delito === true && decision === 'delito') || (pj.delito === false && decision === 'libre');
-            if (clasificacionBien) clasificacionesCorrectas += 1;
-            if (pj.delito === true && pj.sancion && pj.sancion !== 'NO TIENE') {
+
+            const clasificacionBien =
+                (pj.delito === true && decision === 'delito') ||
+                (pj.delito === false && decision === 'libre');
+
+            if (clasificacionBien) {
+                clasificacionesCorrectas += 1;
+            }
+
+            if (
+                pj.delito === true &&
+                pj.sancion &&
+                pj.sancion !== 'NO TIENE'
+            ) {
                 const sancionAsignada = this._obtenerSancionAsignada(pj);
-                if (sancionAsignada && sancionAsignada.nombre === pj.sancion.nombre) sancionesCorrectas += 1;
+
+                if (
+                    sancionAsignada &&
+                    sancionAsignada.nombre === pj.sancion.nombre
+                ) {
+                    sancionesCorrectas += 1;
+                }
             }
         });
+
         const puntosClasificacion = clasificacionesCorrectas * 10;
         const puntosSanciones = sancionesCorrectas * 10;
-        const totalBruto = puntosClasificacion + puntosSanciones;
+
+        const totalBrutoDia = puntosClasificacion + puntosSanciones;
         const penalizacion = this.penalizacionDia || 0;
-        return { dia: this.diaActual, clasificacionesCorrectas, puntosClasificacion, sancionesCorrectas, puntosSanciones, totalBruto, penalizacion, vidasRestantes: this.vidasDiaActual, total: Math.max(0, totalBruto - penalizacion) };
+        const totalDia = Math.max(0, totalBrutoDia - penalizacion);
+
+        const puntajeAnterior = this.puntajeDia || {};
+
+        const totalAnterior =
+            typeof puntajeAnterior.total === 'number'
+                ? puntajeAnterior.total
+                : 0;
+
+        const totalBrutoAnterior =
+            typeof puntajeAnterior.totalBruto === 'number'
+                ? puntajeAnterior.totalBruto
+                : 0;
+
+        const detalleAnterior = Array.isArray(puntajeAnterior.detalleDias)
+            ? puntajeAnterior.detalleDias
+            : [];
+
+        const detalleDiaActual = {
+            dia: this.diaActual,
+            clasificacionesCorrectas,
+            puntosClasificacion,
+            sancionesCorrectas,
+            puntosSanciones,
+            totalBrutoDia,
+            penalizacion,
+            vidasRestantes: this.vidasDiaActual,
+            totalDia
+        };
+
+        return {
+            dia: this.diaActual,
+
+            clasificacionesCorrectas,
+            puntosClasificacion,
+            sancionesCorrectas,
+            puntosSanciones,
+
+            totalBrutoDia,
+            penalizacion,
+            vidasRestantes: this.vidasDiaActual,
+            totalDia,
+
+            totalBruto: totalBrutoAnterior + totalBrutoDia,
+            total: totalAnterior + totalDia,
+
+            bonusMinijuego: puntajeAnterior.bonusMinijuego || 0,
+
+            detalleDias: [
+                ...detalleAnterior,
+                detalleDiaActual
+            ]
+        };
     }
 
     obtenerAlgoritmoGrafoPorDia() {
@@ -1283,11 +2290,38 @@ export class Ventana1 extends Phaser.Scene {
     // RK Game
     // ─────────────────────────────────────────────────────────
     iniciarRKVentanaDirecto() {
+        this.rkEstadosAnterioresPorPad = {};
         this.rkVentanaAnterior = { l1: false, r1: false, x: false, y: false, b: false, a: false, arriba: false, abajo: false, izquierda: false, derecha: false };
+        try {
+            if (this.input && this.input.gamepad) {
+                if (typeof this.input.gamepad.start === 'function') {
+                    this.input.gamepad.start();
+                }
+
+                if (typeof this.input.gamepad.startListeners === 'function') {
+                    this.input.gamepad.startListeners();
+                }
+            }
+        } catch (error) {
+            console.warn('No se pudo iniciar gamepads en Ventana1:', error);
+        }
         this.rkItemsModal = [];
         this.rkIndiceModal = 0;
         this.rkSelectorItems = [];
         this.rkSelectorIndice = 0;
+        try {
+            if (this.input && this.input.gamepad) {
+                if (typeof this.input.gamepad.start === 'function') {
+                    this.input.gamepad.start();
+                }
+
+                if (typeof this.input.gamepad.startListeners === 'function') {
+                    this.input.gamepad.startListeners();
+                }
+            }
+        } catch (error) {
+            console.warn('No se pudo iniciar gamepads en Ventana1:', error);
+        }
         this.rkOcultarFocoModal = false;
         this.rkFocoModal = this.add.rectangle(0, 0, 120, 60, 0x78a7ff, 0.10).setDepth(260).setVisible(false);
         this.rkFocoModal.setStrokeStyle(3, 0xffffff, 0.9);
@@ -1295,31 +2329,76 @@ export class Ventana1 extends Phaser.Scene {
 
     actualizarRKVentanaDirecto() {
         if (this.yaTransicionando) return;
-        const pad = this.obtenerPadRKVentana();
-        if (!pad) { if (this.rkFocoModal) this.rkFocoModal.setVisible(false); return; }
-        const estado = this.leerEstadoRKVentana(pad);
 
-        const l1JustDown = estado.l1 && !this.rkVentanaAnterior.l1;
-        const r1JustDown = estado.r1 && !this.rkVentanaAnterior.r1;
-        const xJustDown = estado.x && !this.rkVentanaAnterior.x;
-        const yJustDown = estado.y && !this.rkVentanaAnterior.y;
-        const bJustDown = estado.b && !this.rkVentanaAnterior.b;
-        const aJustDown = estado.a && !this.rkVentanaAnterior.a;
-        const arribaJustDown = estado.arriba && !this.rkVentanaAnterior.arriba;
-        const abajoJustDown = estado.abajo && !this.rkVentanaAnterior.abajo;
-        const izquierdaJustDown = estado.izquierda && !this.rkVentanaAnterior.izquierda;
-        const derechaJustDown = estado.derecha && !this.rkVentanaAnterior.derecha;
+        // Volumen de música en Ventana1 con flechitas de ambos mandos.
+        // No usa joystick, solo cruceta/flechitas.
+        this.actualizarVolumenVentanaConMandos();
 
-        const hayActividadReal = l1JustDown || r1JustDown || aJustDown || xJustDown || yJustDown
-            || bJustDown || arribaJustDown || abajoJustDown || izquierdaJustDown || derechaJustDown;
+        const entrada = this.leerInputTodosLosMandosVentana();
+        const estado = entrada.estado;
+        const justDown = entrada.justDown;
 
-        // Si estábamos esperando neutral del stick, verificar si ya está en reposo
+        const hayMandoActivo =
+            estado.l1 ||
+            estado.r1 ||
+            estado.x ||
+            estado.y ||
+            estado.b ||
+            estado.a ||
+            estado.arriba ||
+            estado.abajo ||
+            estado.izquierda ||
+            estado.derecha;
+
+        if (!hayMandoActivo && !this.rkModoActivo) {
+            if (this.rkFocoModal) {
+                this.rkFocoModal.setVisible(false);
+            }
+        }
+
+        const l1JustDown = justDown.l1;
+        const r1JustDown = justDown.r1;
+        const xJustDown = justDown.x;
+        const yJustDown = justDown.y;
+        const bJustDown = justDown.b;
+        const aJustDown = justDown.a;
+
+        const arribaJustDown = justDown.arriba;
+        const abajoJustDown = justDown.abajo;
+        const izquierdaJustDown = justDown.izquierda;
+        const derechaJustDown = justDown.derecha;
+
+        const hayActividadReal =
+            l1JustDown ||
+            r1JustDown ||
+            aJustDown ||
+            xJustDown ||
+            yJustDown ||
+            bJustDown ||
+            arribaJustDown ||
+            abajoJustDown ||
+            izquierdaJustDown ||
+            derechaJustDown;
+
         if (this.rkEsperarNeutralStick) {
-            const stickNeutral = !estado.arriba && !estado.abajo && !estado.izquierda && !estado.derecha;
-            if (stickNeutral && !estado.l1 && !estado.r1 && !estado.a && !estado.b && !estado.x && !estado.y) {
+            const stickNeutral =
+                !estado.arriba &&
+                !estado.abajo &&
+                !estado.izquierda &&
+                !estado.derecha;
+
+            if (
+                stickNeutral &&
+                !estado.l1 &&
+                !estado.r1 &&
+                !estado.a &&
+                !estado.b &&
+                !estado.x &&
+                !estado.y
+            ) {
                 this.rkEsperarNeutralStick = false;
             }
-            this.rkVentanaAnterior = estado;
+
             return;
         }
 
@@ -1330,22 +2409,196 @@ export class Ventana1 extends Phaser.Scene {
             this.rkPuedeAutoScroll = true;
         }
 
-        if (l1JustDown) this.accionRKBackVentana();
-        if (r1JustDown) { this.accionRKConfirmarVentana(); this.rkVentanaAnterior = estado; return; }
-
-        if (this.modalAbierto) {
-            this.actualizarRKDentroDeModal({ aJustDown, arribaJustDown, abajoJustDown, izquierdaJustDown, derechaJustDown, arriba: estado.arriba, abajo: estado.abajo, izquierda: estado.izquierda, derecha: estado.derecha });
-            this.rkVentanaAnterior = estado;
+        if (l1JustDown) {
+            this.accionRKBackVentana();
             return;
         }
 
-        if (xJustDown) this.accionRKBuscadorVentana();
-        if (bJustDown) this.accionRKDelitosEncontradosVentana();
-        if (yJustDown) this.accionRKManualVentana();
+        if (r1JustDown) {
+            this.accionRKConfirmarVentana();
+            return;
+        }
 
-        this.rkVentanaAnterior = estado;
+        if (this.modalAbierto) {
+            this.actualizarRKDentroDeModal({
+                aJustDown,
+                arribaJustDown,
+                abajoJustDown,
+                izquierdaJustDown,
+                derechaJustDown,
+                arriba: estado.arriba,
+                abajo: estado.abajo,
+                izquierda: estado.izquierda,
+                derecha: estado.derecha
+            });
+
+            return;
+        }
+
+        // Pantalla principal:
+        // X abre buscador
+        // B abre delitos encontrados
+        // Y abre manual
+        if (xJustDown) {
+            this.accionRKBuscadorVentana();
+            return;
+        }
+
+        if (bJustDown) {
+            this.accionRKDelitosEncontradosVentana();
+            return;
+        }
+
+        if (yJustDown) {
+            this.accionRKManualVentana();
+            return;
+        }
+    }
+    obtenerMandosVentana() {
+        let pads = [];
+
+        if (navigator.getGamepads) {
+            pads = Array.from(navigator.getGamepads())
+                .filter(pad => pad && pad.connected);
+        }
+
+        if (pads.length === 0 && this.input && this.input.gamepad) {
+            if (typeof this.input.gamepad.getAll === 'function') {
+                pads = this.input.gamepad.getAll()
+                    .filter(pad => pad && pad.connected !== false);
+            } else if (this.input.gamepad.gamepads) {
+                pads = this.input.gamepad.gamepads
+                    .filter(pad => pad && pad.connected !== false);
+            }
+        }
+
+        return pads;
     }
 
+    leerEstadoTodosLosMandosVentana() {
+        const pads = this.obtenerMandosVentana();
+
+        const estadoFinal = {
+            l1: false,
+            r1: false,
+            x: false,
+            y: false,
+            b: false,
+            a: false,
+            arriba: false,
+            abajo: false,
+            izquierda: false,
+            derecha: false
+        };
+
+        pads.forEach(pad => {
+            const estado = this.leerEstadoRKVentana(pad);
+
+            estadoFinal.l1 = estadoFinal.l1 || estado.l1;
+            estadoFinal.r1 = estadoFinal.r1 || estado.r1;
+            estadoFinal.x = estadoFinal.x || estado.x;
+            estadoFinal.y = estadoFinal.y || estado.y;
+            estadoFinal.b = estadoFinal.b || estado.b;
+            estadoFinal.a = estadoFinal.a || estado.a;
+            estadoFinal.arriba = estadoFinal.arriba || estado.arriba;
+            estadoFinal.abajo = estadoFinal.abajo || estado.abajo;
+            estadoFinal.izquierda = estadoFinal.izquierda || estado.izquierda;
+            estadoFinal.derecha = estadoFinal.derecha || estado.derecha;
+        });
+
+        return estadoFinal;
+    }
+
+    _crearEstadoVacioRKVentana() {
+        return {
+            l1: false,
+            r1: false,
+            x: false,
+            y: false,
+            b: false,
+            a: false,
+            arriba: false,
+            abajo: false,
+            izquierda: false,
+            derecha: false
+        };
+    }
+
+    botonRKVentana(pad, index) {
+        if (!pad || !pad.buttons || index < 0 || index >= pad.buttons.length) {
+            return false;
+        }
+
+        const boton = pad.buttons[index];
+
+        if (!boton) return false;
+
+        if (typeof boton.pressed === 'boolean') {
+            return boton.pressed;
+        }
+
+        if (typeof boton.value === 'number') {
+            return boton.value > 0.35;
+        }
+
+        if (typeof boton.getValue === 'function') {
+            return boton.getValue() > 0.35;
+        }
+
+        return false;
+    }
+
+    _obtenerIdPadVentana(pad, index) {
+        if (!pad) return `pad_${index}`;
+
+        const slot =
+            typeof pad.index === 'number'
+                ? pad.index
+                : index;
+
+        return `slot_${slot}`;
+    }
+
+    leerInputTodosLosMandosVentana() {
+        const pads = this.obtenerMandosVentana();
+
+        const estadoFinal = this._crearEstadoVacioRKVentana();
+        const justDownFinal = this._crearEstadoVacioRKVentana();
+
+        if (!this.rkEstadosAnterioresPorPad) {
+            this.rkEstadosAnterioresPorPad = {};
+        }
+
+        pads.forEach((pad, index) => {
+            const idPad = this._obtenerIdPadVentana(pad, index);
+            const estadoActual = this.leerEstadoRKVentana(pad);
+
+            const estadoAnterior =
+                this.rkEstadosAnterioresPorPad[idPad] ||
+                this._crearEstadoVacioRKVentana();
+
+            Object.keys(estadoFinal).forEach(key => {
+                estadoFinal[key] =
+                    estadoFinal[key] ||
+                    estadoActual[key];
+
+                justDownFinal[key] =
+                    justDownFinal[key] ||
+                    (estadoActual[key] && !estadoAnterior[key]);
+            });
+
+            // IMPORTANTE:
+            // Esta línea debe quedar con los tres puntos.
+            this.rkEstadosAnterioresPorPad[idPad] = { ...estadoActual };
+        });
+
+        return {
+            estado: estadoFinal,
+            justDown: justDownFinal,
+            cantidadMandos: pads.length,
+            mandos: pads
+        };
+    }
     actualizarRKDentroDeModal(input) {
         if (this._sancionesModalElements && this._sancionesModalElements.length) { this.actualizarRKSelectorSanciones(input); return; }
         if (this.modalTipoActual === 'manual') { this.actualizarRKScrollManual(input); return; }
@@ -1508,29 +2761,127 @@ export class Ventana1 extends Phaser.Scene {
     }
 
     obtenerPadRKVentana() {
-        if (!this.input.gamepad) return null;
-        if (typeof this.input.gamepad.getPad === 'function') return this.input.gamepad.getPad(0);
-        if (this.input.gamepad.gamepads) return this.input.gamepad.gamepads[0] || null;
-        return null;
+        const pads = this.obtenerMandosVentana();
+        return pads[0] || null;
+    }
+    _esMandoPlayVentana(pad) {
+        if (!pad) return false;
+
+        const id = (pad.id || pad.idName || '').toLowerCase();
+
+        return (
+            id.includes('wireless controller') ||
+            id.includes('dualshock') ||
+            id.includes('dualsense') ||
+            id.includes('playstation') ||
+            id.includes('ps4') ||
+            id.includes('ps5')
+        );
     }
 
     leerEstadoRKVentana(pad) {
-        const ejeX = this.leerEjeRKVentana(pad, 0), ejeY = this.leerEjeRKVentana(pad, 1);
-        return { l1: this.botonRKVentana(pad, 6), r1: this.botonRKVentana(pad, 7), a: this.botonARKVentana(pad), x: this.botonXRKVentana(pad), y: this.botonRKVentana(pad, 4), b: this.botonRKVentana(pad, 1), izquierda: ejeX < -0.45 || this.botonRKVentana(pad, 14), derecha: ejeX > 0.45 || this.botonRKVentana(pad, 15), arriba: ejeY < -0.45 || this.botonRKVentana(pad, 12), abajo: ejeY > 0.45 || this.botonRKVentana(pad, 13) };
+        const ejeX = this.leerEjeRKVentana(pad, 0);
+        const ejeY = this.leerEjeRKVentana(pad, 1);
+
+        const esPlay = this._esMandoPlayVentana(pad);
+
+        if (esPlay) {
+            return {
+                // PlayStation:
+                // X/Cruz = A = 0
+                // Círculo = B = 1
+                // Cuadrado = X = 2
+                // Triángulo = Y = 3
+                // L1 = 4
+                // R1 = 5
+
+                l1: this.botonRKVentana(pad, 4),
+                r1: this.botonRKVentana(pad, 5),
+
+                a: this.botonRKVentana(pad, 0),
+                b: this.botonRKVentana(pad, 1),
+                x: this.botonRKVentana(pad, 2),
+                y: this.botonRKVentana(pad, 3),
+
+                izquierda:
+                    ejeX < -0.45 ||
+                    this.botonRKVentana(pad, 14),
+
+                derecha:
+                    ejeX > 0.45 ||
+                    this.botonRKVentana(pad, 15),
+
+                arriba:
+                    ejeY < -0.45 ||
+                    this.botonRKVentana(pad, 12),
+
+                abajo:
+                    ejeY > 0.45 ||
+                    this.botonRKVentana(pad, 13)
+            };
+        }
+
+        return {
+            // RK Game:
+            // X = buscador
+            // B = delitos encontrados
+            // Y = manual
+            // L1 = volver
+            // R1 = finalizar / confirmar
+
+            l1: this.botonRKVentana(pad, 6),
+
+            r1:
+                this.botonRKVentana(pad, 5) ||
+                this.botonRKVentana(pad, 7),
+
+            a: this.botonRKVentana(pad, 0),
+
+            b: this.botonRKVentana(pad, 1),
+
+            x:
+                this.botonRKVentana(pad, 2) ||
+                this.botonRKVentana(pad, 3),
+
+            y: this.botonRKVentana(pad, 4),
+
+            izquierda:
+                ejeX < -0.45 ||
+                this.botonRKVentana(pad, 14),
+
+            derecha:
+                ejeX > 0.45 ||
+                this.botonRKVentana(pad, 15),
+
+            arriba:
+                ejeY < -0.45 ||
+                this.botonRKVentana(pad, 12),
+
+            abajo:
+                ejeY > 0.45 ||
+                this.botonRKVentana(pad, 13)
+        };
     }
 
     leerEjeRKVentana(pad, index) {
-        if (!pad || !pad.axes || !pad.axes[index]) return 0;
+        if (!pad || !pad.axes || index < 0 || index >= pad.axes.length) return 0;
+
         const eje = pad.axes[index];
-        let valor = typeof eje.getValue === 'function' ? eje.getValue() : typeof eje.value === 'number' ? eje.value : typeof eje === 'number' ? eje : 0;
-        return Math.abs(valor) < 0.55 ? 0 : valor;
+        let valor = 0;
+
+        if (typeof eje === 'number') {
+            valor = eje;
+        } else if (eje && typeof eje.getValue === 'function') {
+            valor = eje.getValue();
+        } else if (eje && typeof eje.value === 'number') {
+            valor = eje.value;
+        }
+
+        if (Math.abs(valor) < 0.25) return 0;
+
+        return valor;
     }
 
-    botonRKVentana(pad, index) {
-        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
-        const boton = pad.buttons[index];
-        return boton.pressed === true || (typeof boton.value === 'number' ? boton.value : 0) > 0.35;
-    }
 
     botonXRKVentana(pad) { return this.botonRKVentana(pad, 2) || this.botonRKVentana(pad, 3); }
     botonARKVentana(pad) { return this.botonRKVentana(pad, 0) || this.botonRKVentana(pad, 5) || this.botonRKVentana(pad, 8); }
@@ -1545,22 +2896,135 @@ export class Ventana1 extends Phaser.Scene {
         if (item) { this.asegurarItemRKVisible(item); this.actualizarFocoRKModal(); }
     }
 
+    _guardarPartidaActual(extra = {}) {
+        const partidaActual = {
+            diaActual: this.diaActual,
+            modoSoloFondo: this.modoSoloFondo,
+            transicionEntrada: this.transicionEntrada,
+
+            volumenActual: this.volumenActual,
+            modoJuego: this.modoJuego,
+            jugadores: this.jugadores,
+
+            delitosEncontrados: this.delitosEncontrados || [],
+            estadoBuscadorPorDia: this.estadoBuscadorPorDia || {},
+            sancionesAsignadas: this.sancionesAsignadas || {},
+
+            vidasDiaActual: this.vidasDiaActual,
+            penalizacionDia: this.penalizacionDia,
+
+            puntajeDia: this.puntajeDia || {
+                total: 0,
+                totalBruto: 0,
+                bonusMinijuego: 0,
+                detalleDias: []
+            },
+
+            cabecillaElegida: this.cabecillaElegida || null,
+            cabecillaCorrecto: this.cabecillaCorrecto || null,
+            penalizacionesCabecillaDia6: this.penalizacionesCabecillaDia6 || 0,
+
+            ...extra
+        };
+
+        this.game.registry.set('partidaActual', partidaActual);
+    }
     finalizarDia() {
+        if (this.yaTransicionando) return;
+
         this.yaTransicionando = true;
         this.desactivarInteractivosPrincipales();
-        if (this.cerrarModalZone) this.cerrarModalZone.disableInteractive();
+
+        if (this.cerrarModalZone) {
+            this.cerrarModalZone.disableInteractive();
+        }
+
         const puntajeDia = this._calcularPuntajeDia();
-        const siguienteEstado = this._obtenerEstadoSiguienteDespuesDelPuntaje();
-        const casosDelDia = (this.delitosEncontrados || []).filter(pj => pj && pj.dia === this.diaActual);
+
+        const siguienteEstado = {
+            ...this._obtenerEstadoSiguienteDespuesDelPuntaje(),
+            puntajeDia,
+            modoJuego: this.modoJuego,
+            jugadores: this.jugadores
+        };
+
+        this._guardarPartidaActual({
+            ...siguienteEstado,
+            puntajeDia
+        });
+
         this.fadeOutMusica(() => {
             this.cameras.main.fadeOut(420, 0, 0, 0);
+
             this.time.delayedCall(420, () => {
-                if (this.diaActual === 1) { this.scene.start('AtrapaEvidencia', { puntajeDia, siguienteEstado, casos: this._prepararCasosAtrapaEvidencia(), volumenActual: this.volumenActual, modoJuego: this.modoJuego, jugadores: this.jugadores }); return; }
-                if (this.diaActual === 2) { this.scene.start('DetenCadena', { puntajeDia, siguienteEstado, casos: this._prepararCasosAtrapaEvidencia(), volumenActual: this.volumenActual, modoJuego: this.modoJuego, jugadores: this.jugadores }); return; }
-                if (this.diaActual === 3) { this.scene.start('CazaRumores', { puntajeDia, siguienteEstado, casos: this._prepararCasosAtrapaEvidencia(), volumenActual: this.volumenActual, modoJuego: this.modoJuego, jugadores: this.jugadores }); return; }
-                if (this.diaActual === 4) { this.scene.start('MemoriaPistas', { puntajeDia, siguienteEstado, casos: this._prepararCasosAtrapaEvidencia(), volumenActual: this.volumenActual, modoJuego: this.modoJuego, jugadores: this.jugadores }); return; }
-                if (this.diaActual === 5) { this.scene.start('LaberintoDigital', { puntajeDia, siguienteEstado, casos: this._prepararCasosAtrapaEvidencia(), volumenActual: this.volumenActual, modoJuego: this.modoJuego, jugadores: this.jugadores }); return; }
-                this.scene.start('PuntajeDia', { puntajeDia, siguienteEstado, modoJuego: this.modoJuego, jugadores: this.jugadores, casosDia: casosDelDia, algoritmoGrafo: this.obtenerAlgoritmoGrafoPorDia() });
+                if (this.diaActual === 1) {
+                    this.scene.start('AtrapaEvidencia', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+
+                if (this.diaActual === 2) {
+                    this.scene.start('DetenCadena', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+
+                if (this.diaActual === 3) {
+                    this.scene.start('CazaRumores', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+
+                if (this.diaActual === 4) {
+                    this.scene.start('MemoriaPistas', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+
+                if (this.diaActual === 5) {
+                    this.scene.start('LaberintoDigital', {
+                        puntajeDia,
+                        siguienteEstado,
+                        casos: this._prepararCasosAtrapaEvidencia(),
+                        volumenActual: this.volumenActual,
+                        modoJuego: this.modoJuego,
+                        jugadores: this.jugadores
+                    });
+                    return;
+                }
+
+                this.scene.start('PuntajeDia', {
+                    puntajeDia,
+                    siguienteEstado,
+                    modoJuego: this.modoJuego,
+                    jugadores: this.jugadores,
+                    casosDia: this.personajesDia || [],
+                    algoritmoGrafo: this.obtenerAlgoritmoGrafoPorDia()
+                });
             });
         });
     }
@@ -1608,31 +3072,169 @@ export class Ventana1 extends Phaser.Scene {
     }
 
     _iniciarRKDia6o7(accionR1, accionL1) {
-        this._rkDia6o7Anterior = { r1: false, l1: false };
+        this._rkDia6o7Anterior = {
+            r1: false,
+            l1: false
+        };
+
+        this._rkDia6o7CooldownVolumen = 0;
+
         this.events.on('update', () => {
-            const pad = this.input.gamepad &&
-                (typeof this.input.gamepad.getPad === 'function'
-                    ? this.input.gamepad.getPad(0)
-                    : (this.input.gamepad.gamepads && this.input.gamepad.gamepads[0]));
-            if (!pad) return;
-            const r1 = pad.buttons && pad.buttons[7] && (pad.buttons[7].pressed || pad.buttons[7].value > 0.35);
-            const l1 = pad.buttons && pad.buttons[6] && (pad.buttons[6].pressed || pad.buttons[6].value > 0.35);
-            if (r1 && !this._rkDia6o7Anterior.r1) accionR1();
-            if (l1 && !this._rkDia6o7Anterior.l1) accionL1();
-            this._rkDia6o7Anterior = { r1, l1 };
+            if (this.yaTransicionando) return;
+
+            this.actualizarVolumenDia7ConMandos();
+
+            const entrada = this.leerInputTodosLosMandosVentana();
+            const justDown = entrada.justDown;
+
+            if (justDown.r1) {
+                accionR1();
+                return;
+            }
+
+            if (justDown.l1) {
+                accionL1();
+                return;
+            }
         });
+
         this.input.keyboard.on('keydown-R', accionR1);
         this.input.keyboard.on('keydown-ESC', accionL1);
     }
 
+    actualizarVolumenDia7ConMandos() {
+        const ahora = this.time.now;
+
+        if (ahora < this._rkDia6o7CooldownVolumen) return;
+
+        const direccion = this.leerDireccionVolumenDia7Mandos();
+
+        if (direccion === 0) return;
+
+        this._setVolumenDia7DesdeMando(this.volumenActual + direccion * 0.05);
+        this._rkDia6o7CooldownVolumen = ahora + 180;
+    }
+
+    leerDireccionVolumenDia7Mandos() {
+        const pads = this.obtenerMandosVentana();
+
+        for (let i = 0; i < pads.length; i++) {
+            const direccion = this.leerDireccionVolumenDia7Mando(pads[i]);
+
+            if (direccion !== 0) {
+                return direccion;
+            }
+        }
+
+        return 0;
+    }
+
+    leerDireccionVolumenDia7Mando(pad) {
+        if (!pad) return 0;
+
+        if (this._esMandoPlayVentana && this._esMandoPlayVentana(pad)) {
+            if (this.botonRKVentana(pad, 14)) return -1;
+            if (this.botonRKVentana(pad, 15)) return 1;
+            return 0;
+        }
+
+        const ejeFlechasRK = this.leerEjeRKVentanaSinDeadzone(pad, this.RK_AXIS_FLECHAS || 9);
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= (this.RK_HAT_IZQUIERDA_MIN ?? 0.65) &&
+            ejeFlechasRK <= (this.RK_HAT_IZQUIERDA_MAX ?? 0.85);
+
+        const rkDerechaHat =
+            ejeFlechasRK >= (this.RK_HAT_DERECHA_MIN ?? -0.50) &&
+            ejeFlechasRK <= (this.RK_HAT_DERECHA_MAX ?? -0.35);
+
+        if (
+            rkIzquierdaHat ||
+            this.botonRKVentana(pad, 14) ||
+            this.botonRKVentana(pad, 16) ||
+            this.botonRKVentana(pad, 18)
+        ) {
+            return -1;
+        }
+
+        if (
+            rkDerechaHat ||
+            this.botonRKVentana(pad, 15) ||
+            this.botonRKVentana(pad, 17) ||
+            this.botonRKVentana(pad, 19)
+        ) {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    leerEjeRKVentanaSinDeadzone(pad, index) {
+        if (!pad || !pad.axes || index < 0 || index >= pad.axes.length) return 0;
+
+        const eje = pad.axes[index];
+
+        if (typeof eje === 'number') {
+            return eje;
+        }
+
+        if (eje && typeof eje.getValue === 'function') {
+            return eje.getValue();
+        }
+
+        if (eje && typeof eje.value === 'number') {
+            return eje.value;
+        }
+
+        return 0;
+    }
+
+    _setVolumenDia7DesdeMando(volumen) {
+        volumen = Phaser.Math.Clamp(volumen, 0, 1);
+
+        this._guardarVolumenGlobal(volumen);
+
+        if (this.sonidoVentana) {
+            this.tweens.killTweensOf(this.sonidoVentana);
+            this.sonidoVentana.setVolume(this.volumenActual);
+        }
+
+        if (this._musicaDia6o7) {
+            this.tweens.killTweensOf(this._musicaDia6o7);
+            this._musicaDia6o7.setVolume(this.volumenActual);
+        }
+
+        if (this.sliderFill) {
+            this.sliderFill.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
+        }
+
+        if (this.sliderGlow) {
+            this.sliderGlow.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
+        }
+
+        if (this.sliderKnob) {
+            const izquierda = this.sliderX - this.sliderWidth / 2;
+            this.sliderKnob.x = izquierda + this.sliderWidth * this.volumenActual;
+        }
+    }
     irAStart() {
         if (this.yaTransicionando) return;
+
         this.yaTransicionando = true;
+
         if (this.backZone) this.backZone.disableInteractive();
         if (this.sliderZone) this.sliderZone.disableInteractive();
+
         this.fadeOutMusica(() => {
             this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(500, () => { this.scene.start('Start', { volumenActual: this.volumenActual }); });
+
+            this.time.delayedCall(500, () => {
+                this.scene.start('Start', {
+                    volumenActual: this.volumenActual,
+                    reiniciarPartida: true,
+                    nuevaPartida: true
+                });
+            });
         });
     }
 

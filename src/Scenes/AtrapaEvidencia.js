@@ -53,6 +53,15 @@ export class AtrapaEvidencia extends Phaser.Scene {
         this.pointerMoveVolMiniHandler = null;
         this.pointerUpVolMiniHandler = null;
         this.pointerMoveCajaHandler = null;
+
+        // RK Game: eje donde reporta las flechitas para volumen.
+        this.RK_AXIS_FLECHAS = 9;
+        this.RK_HAT_IZQUIERDA_MIN = 0.65;
+        this.RK_HAT_IZQUIERDA_MAX = 0.85;
+        this.RK_HAT_DERECHA_MIN = -0.50;
+        this.RK_HAT_DERECHA_MAX = -0.35;
+
+        this.cooldownVolumenMandos = 0;
     }
 
     preload() {
@@ -77,7 +86,6 @@ export class AtrapaEvidencia extends Phaser.Scene {
         });
 
         this.iniciarMandos();
-
         this.iniciarMusicaMinijuego();
         this.crearBarraVolumenMinijuego();
 
@@ -102,30 +110,56 @@ export class AtrapaEvidencia extends Phaser.Scene {
             return;
         }
 
+        this.actualizarVolumenConMandos(time);
         this.actualizarMovimientoCaja(delta);
         this.actualizarObjetosCayendo(delta);
     }
 
     iniciarMandos() {
-        if (!this.input.gamepad) return;
+        try {
+            if (this.input && this.input.gamepad) {
+                if (typeof this.input.gamepad.start === 'function') {
+                    this.input.gamepad.start();
+                }
 
-        this.input.gamepad.on('connected', (pad) => {
-            console.log('Mando conectado:', pad.index, pad.id);
-        });
+                if (typeof this.input.gamepad.startListeners === 'function') {
+                    this.input.gamepad.startListeners();
+                }
+            }
+        } catch (error) {
+            console.warn('No se pudo iniciar gamepad:', error);
+        }
     }
 
     obtenerMando(jugador = 1) {
-        if (!this.input.gamepad) return null;
+        let pads = [];
 
-        const index = jugador === 2 ? 1 : 0;
-
-        if (typeof this.input.gamepad.getPad === 'function') {
-            return this.input.gamepad.getPad(index);
+        if (navigator.getGamepads) {
+            pads = Array.from(navigator.getGamepads())
+                .filter(pad => pad !== null && pad !== undefined);
         }
 
-        if (this.input.gamepad.gamepads) {
-            return this.input.gamepad.gamepads[index] || null;
+        if (pads.length === 0 && this.input && this.input.gamepad) {
+            const manager = this.input.gamepad;
+
+            if (typeof manager.getAll === 'function') {
+                pads = manager.getAll();
+            } else if (Array.isArray(manager.gamepads)) {
+                pads = manager.gamepads;
+            } else {
+                if (manager.pad1) pads.push(manager.pad1);
+                if (manager.pad2) pads.push(manager.pad2);
+                if (manager.pad3) pads.push(manager.pad3);
+                if (manager.pad4) pads.push(manager.pad4);
+            }
         }
+
+        pads = pads.filter(pad => pad !== null && pad !== undefined);
+
+        if (pads.length === 0) return null;
+
+        if (jugador === 1) return pads[0] || null;
+        if (jugador === 2) return pads[1] || null;
 
         return null;
     }
@@ -138,8 +172,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
                 conectado: false,
                 izquierda: false,
                 derecha: false,
-                ejeX: 0,
-                accion: false
+                ejeX: 0
             };
         }
 
@@ -147,25 +180,31 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
         return {
             conectado: true,
-            izquierda: ejeX < -0.35 || this.botonMandoPresionado(pad, 14),
-            derecha: ejeX > 0.35 || this.botonMandoPresionado(pad, 15),
-            accion: this.botonMandoPresionado(pad, 0),
+
+            // SOLO joystick mueve la caja.
+            izquierda: ejeX < -0.35,
+            derecha: ejeX > 0.35,
             ejeX
         };
     }
 
     leerEjeMando(pad, index) {
-        if (!pad || !pad.axes || !pad.axes[index]) return 0;
+        if (!pad) return 0;
 
-        const eje = pad.axes[index];
         let valor = 0;
 
-        if (typeof eje.getValue === 'function') {
-            valor = eje.getValue();
-        } else if (typeof eje.value === 'number') {
-            valor = eje.value;
-        } else if (typeof eje === 'number') {
-            valor = eje;
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                valor = eje.getValue();
+            } else if (typeof eje.value === 'number') {
+                valor = eje.value;
+            } else if (typeof eje === 'number') {
+                valor = eje;
+            }
+        } else if (index === 0 && pad.leftStick) {
+            valor = pad.leftStick.x || 0;
         }
 
         if (Math.abs(valor) < 0.25) return 0;
@@ -173,20 +212,134 @@ export class AtrapaEvidencia extends Phaser.Scene {
         return valor;
     }
 
+    leerEjeMandoSinDeadzone(pad, index) {
+        if (!pad) return 0;
+
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                return eje.getValue();
+            }
+
+            if (typeof eje.value === 'number') {
+                return eje.value;
+            }
+
+            if (typeof eje === 'number') {
+                return eje;
+            }
+        }
+
+        return 0;
+    }
+
     botonMandoPresionado(pad, index) {
-        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+        if (!pad) return false;
 
-        const boton = pad.buttons[index];
+        if (pad.buttons && pad.buttons[index] != null) {
+            const boton = pad.buttons[index];
 
-        if (typeof boton.pressed === 'boolean') {
-            return boton.pressed;
+            if (typeof boton.pressed === 'boolean') {
+                return boton.pressed;
+            }
+
+            if (typeof boton.value === 'number') {
+                return boton.value > 0.35;
+            }
+
+            if (typeof boton.getValue === 'function') {
+                return boton.getValue() > 0.35;
+            }
         }
 
-        if (typeof boton.value === 'number') {
-            return boton.value > 0.5;
-        }
+        if (index === 4 && pad.L1) return pad.L1.pressed || false;
+        if (index === 5 && pad.R1) return pad.R1.pressed || false;
+        if (index === 6 && pad.L2) return pad.L2.pressed || false;
+        if (index === 7 && pad.R2) return pad.R2.pressed || false;
 
         return false;
+    }
+
+    _esMandoPlayAtrapa(pad) {
+        if (!pad) return false;
+
+        const id = (pad.id || pad.idName || '').toLowerCase();
+
+        return (
+            id.includes('wireless controller') ||
+            id.includes('dualshock') ||
+            id.includes('dualsense') ||
+            id.includes('playstation') ||
+            id.includes('ps4') ||
+            id.includes('ps5')
+        );
+    }
+
+    actualizarVolumenConMandos(time) {
+        if (time < this.cooldownVolumenMandos) return;
+
+        const direccion = this.leerDireccionVolumenMandos();
+
+        if (direccion === 0) return;
+
+        this._setVolumenMinijuego(this.volumenMinijuegos + direccion * 0.05);
+        this.cooldownVolumenMandos = time + 180;
+    }
+
+    leerDireccionVolumenMandos() {
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const d1 = this.leerDireccionVolumenMando(pad1);
+        const d2 = this.leerDireccionVolumenMando(pad2);
+
+        if (d1 !== 0) return d1;
+        if (d2 !== 0) return d2;
+
+        return 0;
+    }
+
+    leerDireccionVolumenMando(pad) {
+        if (!pad) return 0;
+
+        // PlayStation: cruceta izquierda/derecha.
+        if (this._esMandoPlayAtrapa(pad)) {
+            if (this.botonMandoPresionado(pad, 14)) return -1;
+            if (this.botonMandoPresionado(pad, 15)) return 1;
+            return 0;
+        }
+
+        // RK Game: flechitas por axis 9.
+        const ejeFlechasRK = this.leerEjeMandoSinDeadzone(pad, this.RK_AXIS_FLECHAS);
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= this.RK_HAT_IZQUIERDA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_IZQUIERDA_MAX;
+
+        const rkDerechaHat =
+            ejeFlechasRK >= this.RK_HAT_DERECHA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_DERECHA_MAX;
+
+        if (
+            rkIzquierdaHat ||
+            this.botonMandoPresionado(pad, 14) ||
+            this.botonMandoPresionado(pad, 16) ||
+            this.botonMandoPresionado(pad, 18)
+        ) {
+            return -1;
+        }
+
+        if (
+            rkDerechaHat ||
+            this.botonMandoPresionado(pad, 15) ||
+            this.botonMandoPresionado(pad, 17) ||
+            this.botonMandoPresionado(pad, 19)
+        ) {
+            return 1;
+        }
+
+        return 0;
     }
 
     crearFondo() {
@@ -309,7 +462,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
                 brillo2: 0xffc2b8
             });
 
-            this.txtIndicacion.setText('Caja 1: A/D o mando 1   •   Caja 2: ←/→ o mando 2');
+            this.txtIndicacion.setText('Caja 1: A/D o joystick mando 1   •   Caja 2: ←/→ o joystick mando 2');
             return;
         }
 
@@ -322,7 +475,7 @@ export class AtrapaEvidencia extends Phaser.Scene {
             brillo2: 0xe0a45e
         });
 
-        this.txtIndicacion.setText('Mueve la caja con ← →, A/D o mando RKGAME');
+        this.txtIndicacion.setText('Mueve la caja con A/D, ←/→ o joystick del mando');
     }
 
     crearUnaCaja(indice, x, texto, colores) {
@@ -437,9 +590,9 @@ export class AtrapaEvidencia extends Phaser.Scene {
         caja.brillo2.x = caja.x + 40;
         caja.texto.x = caja.x;
     }
-
     actualizarMovimientoCaja(delta) {
         const velocidad = 540;
+
         const mando1 = this.leerMando(1);
         const mando2 = this.leerMando(2);
 
@@ -447,19 +600,25 @@ export class AtrapaEvidencia extends Phaser.Scene {
             let direccionCaja1 = 0;
             let direccionCaja2 = 0;
 
-            if (this.keys.A.isDown || mando1.izquierda) {
+            // Jugador 1:
+            // Computador: A / D
+            // Mando 1: joystick
+            if ((this.keys && this.keys.A.isDown) || mando1.izquierda) {
                 direccionCaja1 = -1;
             }
 
-            if (this.keys.D.isDown || mando1.derecha) {
+            if ((this.keys && this.keys.D.isDown) || mando1.derecha) {
                 direccionCaja1 = 1;
             }
 
-            if (this.cursors.left.isDown || mando2.izquierda) {
+            // Jugador 2:
+            // Computador: flecha izquierda / derecha
+            // Mando 2: joystick
+            if ((this.cursors && this.cursors.left.isDown) || mando2.izquierda) {
                 direccionCaja2 = -1;
             }
 
-            if (this.cursors.right.isDown || mando2.derecha) {
+            if ((this.cursors && this.cursors.right.isDown) || mando2.derecha) {
                 direccionCaja2 = 1;
             }
 
@@ -482,11 +641,22 @@ export class AtrapaEvidencia extends Phaser.Scene {
 
         let direccion = 0;
 
-        if (this.cursors.left.isDown || this.keys.A.isDown || mando1.izquierda) {
+        // Modo 1 jugador:
+        // Computador: A / D o ← / →
+        // Mando: joystick
+        if (
+            (this.keys && this.keys.A.isDown) ||
+            (this.cursors && this.cursors.left.isDown) ||
+            mando1.izquierda
+        ) {
             direccion = -1;
         }
 
-        if (this.cursors.right.isDown || this.keys.D.isDown || mando1.derecha) {
+        if (
+            (this.keys && this.keys.D.isDown) ||
+            (this.cursors && this.cursors.right.isDown) ||
+            mando1.derecha
+        ) {
             direccion = 1;
         }
 
@@ -1170,11 +1340,16 @@ export class AtrapaEvidencia extends Phaser.Scene {
         zone.on('pointerdown', continuar);
     }
 
-    botonAMandoPresionado(pad) {
+    botonR1MandoPresionado(pad) {
+        if (!pad) return false;
+
+        if (this._esMandoPlayAtrapa(pad)) {
+            return this.botonMandoPresionado(pad, 5);
+        }
+
         return (
-            this.botonMandoPresionado(pad, 0) ||
             this.botonMandoPresionado(pad, 5) ||
-            this.botonMandoPresionado(pad, 8)
+            this.botonMandoPresionado(pad, 7)
         );
     }
 
@@ -1186,17 +1361,17 @@ export class AtrapaEvidencia extends Phaser.Scene {
         const pad1 = this.obtenerMando(1);
         const pad2 = this.obtenerMando(2);
 
-        const aPresionado =
-            this.botonAMandoPresionado(pad1) ||
-            this.botonAMandoPresionado(pad2);
+        const r1Presionado =
+            this.botonR1MandoPresionado(pad1) ||
+            this.botonR1MandoPresionado(pad2);
 
-        const aJustDown = aPresionado && !this.aNotaAnterior;
+        const r1JustDown = r1Presionado && !this.aNotaAnterior;
 
-        if (aJustDown) {
+        if (r1JustDown) {
             this.continuarNotaFinal();
         }
 
-        this.aNotaAnterior = aPresionado;
+        this.aNotaAnterior = r1Presionado;
     }
 
     reproducirClick(volumen = 0.35) {

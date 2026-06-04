@@ -40,6 +40,14 @@ export class DetenCadena extends Phaser.Scene {
         this.pointerUpVolMiniHandler = null;
         this.mandoCooldownJ1 = 0;
         this.mandoCooldownJ2 = 0;
+
+        this.RK_AXIS_FLECHAS = 9;
+        this.RK_HAT_IZQUIERDA_MIN = 0.65;
+        this.RK_HAT_IZQUIERDA_MAX = 0.85;
+        this.RK_HAT_DERECHA_MIN = -0.50;
+        this.RK_HAT_DERECHA_MAX = -0.35;
+
+        this.cooldownVolumenMandos = 0;
     }
 
     preload() {
@@ -63,11 +71,14 @@ export class DetenCadena extends Phaser.Scene {
         this.iniciarMusicaMinijuego();
         this.crearBarraVolumenMinijuego();
     }
-    update() {
+
+    update(time) {
         if (this.yaTermino) {
             this.actualizarAceptarInformeFinalRK();
             return;
         }
+
+        this.actualizarVolumenConMandos(time);
 
         if (this.jugadores === 2) {
             this.actualizarControlesJugador1();
@@ -148,25 +159,50 @@ export class DetenCadena extends Phaser.Scene {
     }
 
     iniciarMandos() {
-        if (!this.input.gamepad) return;
+        try {
+            if (this.input && this.input.gamepad) {
+                if (typeof this.input.gamepad.start === 'function') {
+                    this.input.gamepad.start();
+                }
 
-        this.input.gamepad.on('connected', (pad) => {
-            console.log('Mando conectado:', pad.index, pad.id);
-        });
+                if (typeof this.input.gamepad.startListeners === 'function') {
+                    this.input.gamepad.startListeners();
+                }
+            }
+        } catch (error) {
+            console.warn('No se pudo iniciar gamepad:', error);
+        }
     }
 
     obtenerMando(jugador = 1) {
-        if (!this.input.gamepad) return null;
+        let pads = [];
 
-        const index = jugador === 2 ? 1 : 0;
-
-        if (typeof this.input.gamepad.getPad === 'function') {
-            return this.input.gamepad.getPad(index);
+        if (navigator.getGamepads) {
+            pads = Array.from(navigator.getGamepads())
+                .filter(pad => pad !== null && pad !== undefined);
         }
 
-        if (this.input.gamepad.gamepads) {
-            return this.input.gamepad.gamepads[index] || null;
+        if (pads.length === 0 && this.input && this.input.gamepad) {
+            const manager = this.input.gamepad;
+
+            if (typeof manager.getAll === 'function') {
+                pads = manager.getAll();
+            } else if (Array.isArray(manager.gamepads)) {
+                pads = manager.gamepads;
+            } else {
+                if (manager.pad1) pads.push(manager.pad1);
+                if (manager.pad2) pads.push(manager.pad2);
+                if (manager.pad3) pads.push(manager.pad3);
+                if (manager.pad4) pads.push(manager.pad4);
+            }
         }
+
+        pads = pads.filter(pad => pad !== null && pad !== undefined);
+
+        if (pads.length === 0) return null;
+
+        if (jugador === 1) return pads[0] || null;
+        if (jugador === 2) return pads[1] || null;
 
         return null;
     }
@@ -188,10 +224,12 @@ export class DetenCadena extends Phaser.Scene {
 
         return {
             conectado: true,
-            izquierda: ejeX < -0.35 || this.botonMandoPresionado(pad, 14),
-            derecha: ejeX > 0.35 || this.botonMandoPresionado(pad, 15),
 
-            // Botón A del RKGAME normalmente es botón 0
+            // Joystick para mover selector.
+            izquierda: ejeX < -0.35,
+            derecha: ejeX > 0.35,
+
+            // A para seleccionar.
             accion: this.botonMandoPresionado(pad, 0),
 
             ejeX
@@ -199,17 +237,22 @@ export class DetenCadena extends Phaser.Scene {
     }
 
     leerEjeMando(pad, index) {
-        if (!pad || !pad.axes || !pad.axes[index]) return 0;
+        if (!pad) return 0;
 
-        const eje = pad.axes[index];
         let valor = 0;
 
-        if (typeof eje.getValue === 'function') {
-            valor = eje.getValue();
-        } else if (typeof eje.value === 'number') {
-            valor = eje.value;
-        } else if (typeof eje === 'number') {
-            valor = eje;
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                valor = eje.getValue();
+            } else if (typeof eje.value === 'number') {
+                valor = eje.value;
+            } else if (typeof eje === 'number') {
+                valor = eje;
+            }
+        } else if (index === 0 && pad.leftStick) {
+            valor = pad.leftStick.x || 0;
         }
 
         if (Math.abs(valor) < 0.25) return 0;
@@ -217,26 +260,80 @@ export class DetenCadena extends Phaser.Scene {
         return valor;
     }
 
+    leerEjeMandoSinDeadzone(pad, index) {
+        if (!pad) return 0;
+
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                return eje.getValue();
+            }
+
+            if (typeof eje.value === 'number') {
+                return eje.value;
+            }
+
+            if (typeof eje === 'number') {
+                return eje;
+            }
+        }
+
+        return 0;
+    }
+
     botonMandoPresionado(pad, index) {
-        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+        if (!pad) return false;
 
-        const boton = pad.buttons[index];
+        if (pad.buttons && pad.buttons[index] != null) {
+            const boton = pad.buttons[index];
 
-        if (typeof boton.pressed === 'boolean') {
-            return boton.pressed;
+            if (typeof boton.pressed === 'boolean') {
+                return boton.pressed;
+            }
+
+            if (typeof boton.value === 'number') {
+                return boton.value > 0.35;
+            }
+
+            if (typeof boton.getValue === 'function') {
+                return boton.getValue() > 0.35;
+            }
         }
 
-        if (typeof boton.value === 'number') {
-            return boton.value > 0.5;
-        }
+        if (index === 4 && pad.L1) return pad.L1.pressed || false;
+        if (index === 5 && pad.R1) return pad.R1.pressed || false;
+        if (index === 6 && pad.L2) return pad.L2.pressed || false;
+        if (index === 7 && pad.R2) return pad.R2.pressed || false;
 
         return false;
     }
-    botonAMandoPresionado(pad) {
+
+    _esMandoPlayDeten(pad) {
+        if (!pad) return false;
+
+        const id = (pad.id || pad.idName || '').toLowerCase();
+
         return (
-            this.botonMandoPresionado(pad, 0) ||
+            id.includes('wireless controller') ||
+            id.includes('dualshock') ||
+            id.includes('dualsense') ||
+            id.includes('playstation') ||
+            id.includes('ps4') ||
+            id.includes('ps5')
+        );
+    }
+
+    botonR1MandoPresionado(pad) {
+        if (!pad) return false;
+
+        if (this._esMandoPlayDeten(pad)) {
+            return this.botonMandoPresionado(pad, 5);
+        }
+
+        return (
             this.botonMandoPresionado(pad, 5) ||
-            this.botonMandoPresionado(pad, 8)
+            this.botonMandoPresionado(pad, 7)
         );
     }
 
@@ -248,17 +345,83 @@ export class DetenCadena extends Phaser.Scene {
         const pad1 = this.obtenerMando(1);
         const pad2 = this.obtenerMando(2);
 
-        const aPresionado =
-            this.botonAMandoPresionado(pad1) ||
-            this.botonAMandoPresionado(pad2);
+        const r1Presionado =
+            this.botonR1MandoPresionado(pad1) ||
+            this.botonR1MandoPresionado(pad2);
 
-        const aJustDown = aPresionado && !this.aInformeAnterior;
+        const r1JustDown = r1Presionado && !this.aInformeAnterior;
 
-        if (aJustDown) {
+        if (r1JustDown) {
             this.continuarInformeFinal();
         }
 
-        this.aInformeAnterior = aPresionado;
+        this.aInformeAnterior = r1Presionado;
+    }
+
+    actualizarVolumenConMandos(time) {
+        if (time < this.cooldownVolumenMandos) return;
+
+        const direccion = this.leerDireccionVolumenMandos();
+
+        if (direccion === 0) return;
+
+        this._setVolumenMinijuego(this.volumenMinijuegos + direccion * 0.05);
+        this.cooldownVolumenMandos = time + 180;
+    }
+
+    leerDireccionVolumenMandos() {
+        const pad1 = this.obtenerMando(1);
+        const pad2 = this.obtenerMando(2);
+
+        const d1 = this.leerDireccionVolumenMando(pad1);
+        const d2 = this.leerDireccionVolumenMando(pad2);
+
+        if (d1 !== 0) return d1;
+        if (d2 !== 0) return d2;
+
+        return 0;
+    }
+
+    leerDireccionVolumenMando(pad) {
+        if (!pad) return 0;
+
+        // PlayStation: cruceta izquierda/derecha.
+        if (this._esMandoPlayDeten(pad)) {
+            if (this.botonMandoPresionado(pad, 14)) return -1;
+            if (this.botonMandoPresionado(pad, 15)) return 1;
+            return 0;
+        }
+
+        // RK Game: flechitas por axis 9.
+        const ejeFlechasRK = this.leerEjeMandoSinDeadzone(pad, this.RK_AXIS_FLECHAS);
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= this.RK_HAT_IZQUIERDA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_IZQUIERDA_MAX;
+
+        const rkDerechaHat =
+            ejeFlechasRK >= this.RK_HAT_DERECHA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_DERECHA_MAX;
+
+        if (
+            rkIzquierdaHat ||
+            this.botonMandoPresionado(pad, 14) ||
+            this.botonMandoPresionado(pad, 16) ||
+            this.botonMandoPresionado(pad, 18)
+        ) {
+            return -1;
+        }
+
+        if (
+            rkDerechaHat ||
+            this.botonMandoPresionado(pad, 15) ||
+            this.botonMandoPresionado(pad, 17) ||
+            this.botonMandoPresionado(pad, 19)
+        ) {
+            return 1;
+        }
+
+        return 0;
     }
 
     procesarMandoJugador(jugador, numeroMando) {
@@ -551,14 +714,14 @@ export class DetenCadena extends Phaser.Scene {
 
     obtenerTextoAyudaJugador(numero) {
         if (this.jugadores === 1) {
-            return 'A/D, ←/→ o mando para moverte  •  W, ↑, SPACE, ENTER o botón A para elegir';
+            return 'Joystick para moverte  •  A para elegir  •  Flechitas para volumen';
         }
 
         if (numero === 1) {
-            return 'A/D o mando 1 para moverte  •  W o botón A para elegir';
+            return 'Mando 1: joystick mueve  •  A elige';
         }
 
-        return '←/→ o mando 2 para moverte  •  ↑ o botón A para elegir';
+        return 'Mando 2: joystick mueve  •  A elige';
     }
 
     actualizarPanelJugador(jugador) {
@@ -727,11 +890,9 @@ export class DetenCadena extends Phaser.Scene {
             this.confirmarSeleccion(this.jugador1);
         }
 
-        // RKGAME jugador 1:
-        // izquierda/derecha mueve opciones
-        // botón A confirma
         this.procesarMandoJugador(this.jugador1, 1);
     }
+
     actualizarControlesJugador1() {
         if (Phaser.Input.Keyboard.JustDown(this.keys.A)) {
             this.moverSelector(this.jugador1, -1);
@@ -745,9 +906,6 @@ export class DetenCadena extends Phaser.Scene {
             this.confirmarSeleccion(this.jugador1);
         }
 
-        // RKGAME mando 1:
-        // izquierda/derecha mueve opciones
-        // botón A confirma
         this.procesarMandoJugador(this.jugador1, 1);
     }
 
@@ -764,9 +922,6 @@ export class DetenCadena extends Phaser.Scene {
             this.confirmarSeleccion(this.jugador2);
         }
 
-        // RKGAME mando 2:
-        // izquierda/derecha mueve opciones
-        // botón A confirma
         this.procesarMandoJugador(this.jugador2, 2);
     }
 
@@ -1107,6 +1262,7 @@ export class DetenCadena extends Phaser.Scene {
             this.load.audio('click', 'music/click.mp3');
         }
     }
+
     _obtenerVolumenMinijuego() {
         let volumen = this.game.registry.get('volumenMinijuegos');
 
@@ -1221,6 +1377,7 @@ export class DetenCadena extends Phaser.Scene {
 
         this._setVolumenMinijuego(this.volumenMinijuegos);
     }
+
     reproducirSFX(clave, volumenBase = 0.6) {
         if (!this.cache.audio.exists(clave)) return;
 

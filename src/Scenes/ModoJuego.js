@@ -1,3 +1,5 @@
+import { resetPersonajesPartida } from '../structures/Personajes.js';
+
 export class ModoJuego extends Phaser.Scene {
     constructor() {
         super('ModoJuego');
@@ -6,7 +8,13 @@ export class ModoJuego extends Phaser.Scene {
     init(data) {
         data = data || {};
 
-        this.volumenActual = typeof data.volumenActual === 'number' ? data.volumenActual : 0.25;
+        const volumenInicial = typeof data.volumenActual === 'number'
+            ? data.volumenActual
+            : 0.25;
+
+        this.volumenActual = this._obtenerVolumenGlobal(volumenInicial);
+        this.nuevaPartida = data.nuevaPartida === true;
+
         this.modoSeleccionado = null;
         this.yaTransicionando = false;
         this.arrastrandoVolumen = false;
@@ -29,6 +37,16 @@ export class ModoJuego extends Phaser.Scene {
 
         this.estadoBotonesRK = {};
         this.teclasRK = null;
+
+        // RK Game: eje donde reporta las flechitas.
+        this.RK_AXIS_FLECHAS = 9;
+
+        // Rangos ya ajustados según tus pruebas del RK Game.
+        this.RK_HAT_IZQUIERDA_MIN = 0.65;
+        this.RK_HAT_IZQUIERDA_MAX = 0.85;
+
+        this.RK_HAT_DERECHA_MIN = -0.50;
+        this.RK_HAT_DERECHA_MAX = -0.35;
     }
 
     preload() {
@@ -64,12 +82,11 @@ export class ModoJuego extends Phaser.Scene {
 
         if (!this.sonidoContexto) {
             this.sonidoContexto = this.sound.add('contexto', {
-                volume: 0.25,
+                volume: this.volumenActual,
                 loop: true
             });
         }
 
-        this.volumenActual = 0.25;
         this.sonidoContexto.setVolume(this.volumenActual);
 
         if (!this.sonidoContexto.isPlaying) {
@@ -91,6 +108,24 @@ export class ModoJuego extends Phaser.Scene {
         this.actualizarRKGame();
     }
 
+    _obtenerVolumenGlobal(volumenPorDefecto = 0.25) {
+        let volumen = this.game.registry.get('volumenGlobal');
+
+        if (typeof volumen !== 'number') {
+            volumen = volumenPorDefecto;
+            this.game.registry.set('volumenGlobal', volumen);
+        }
+
+        return Phaser.Math.Clamp(volumen, 0, 1);
+    }
+
+    _guardarVolumenGlobal(volumen) {
+        volumen = Phaser.Math.Clamp(volumen, 0, 1);
+
+        this.volumenActual = volumen;
+        this.game.registry.set('volumenGlobal', volumen);
+    }
+
     reproducirClick() {
         if (this.cache.audio.exists('click')) {
             this.sound.play('click', {
@@ -100,15 +135,26 @@ export class ModoJuego extends Phaser.Scene {
     }
 
     // =========================================================
-    // RK GAME
-    // X  = 1 Player
-    // B  = 2 Players
-    // R1 = Next
-    // L1 = Back
+    // CONTROLES RK GAME / PLAYSTATION
+    // PlayStation:
+    // Cuadrado = 1 Player
+    // Círculo  = 2 Players
+    // L1       = Back
+    // R1       = Next
+    // Cruceta izquierda/derecha = volumen
+    //
+    // RK Game:
+    // X        = 1 Player
+    // B        = 2 Players
+    // L1       = Back
+    // R1       = Next
+    // Flechitas izquierda/derecha = volumen
     // =========================================================
 
     configurarRKGame() {
         this.estadoBotonesRK = {};
+        this.estadoBotonesPorPad = {};
+        this.cooldownVolumenRK = 0;
 
         this.teclasRK = this.input.keyboard.addKeys({
             X: Phaser.Input.Keyboard.KeyCodes.X,
@@ -117,7 +163,9 @@ export class ModoJuego extends Phaser.Scene {
             ENTER: Phaser.Input.Keyboard.KeyCodes.ENTER,
             ESC: Phaser.Input.Keyboard.KeyCodes.ESC,
             UNO: Phaser.Input.Keyboard.KeyCodes.ONE,
-            DOS: Phaser.Input.Keyboard.KeyCodes.TWO
+            DOS: Phaser.Input.Keyboard.KeyCodes.TWO,
+            LEFT: Phaser.Input.Keyboard.KeyCodes.LEFT,
+            RIGHT: Phaser.Input.Keyboard.KeyCodes.RIGHT
         });
 
         try {
@@ -131,7 +179,7 @@ export class ModoJuego extends Phaser.Scene {
                 }
             }
         } catch (error) {
-            console.warn('RK Game no disponible en esta escena:', error);
+            console.warn('Gamepad no disponible en ModoJuego:', error);
         }
     }
 
@@ -139,31 +187,28 @@ export class ModoJuego extends Phaser.Scene {
         if (this.yaTransicionando) return;
         if (!this.teclasRK) return;
 
+        const entrada = this.leerInputTodosLosMandosModo();
+        const estado = entrada.estado;
+        const justDown = entrada.justDown;
+
         const seleccionar1P =
-            Phaser.Input.Keyboard.JustDown(this.teclasRK.X)
-            ||
-            Phaser.Input.Keyboard.JustDown(this.teclasRK.UNO)
-            ||
-            this._botonRKJustDown('X');
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.X) ||
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.UNO) ||
+            justDown.x;
 
         const seleccionar2P =
-            Phaser.Input.Keyboard.JustDown(this.teclasRK.B)
-            ||
-            Phaser.Input.Keyboard.JustDown(this.teclasRK.DOS)
-            ||
-            this._botonRKJustDown('B');
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.B) ||
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.DOS) ||
+            justDown.b;
 
         const presionarNext =
-            Phaser.Input.Keyboard.JustDown(this.teclasRK.R)
-            ||
-            Phaser.Input.Keyboard.JustDown(this.teclasRK.ENTER)
-            ||
-            this._botonRKJustDown('R1');
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.R) ||
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.ENTER) ||
+            justDown.r1;
 
         const presionarBack =
-            Phaser.Input.Keyboard.JustDown(this.teclasRK.ESC)
-            ||
-            this._botonRKJustDown('L1');
+            Phaser.Input.Keyboard.JustDown(this.teclasRK.ESC) ||
+            justDown.l1;
 
         if (seleccionar1P) {
             this.reproducirClick();
@@ -186,64 +231,251 @@ export class ModoJuego extends Phaser.Scene {
             this.intentarVolver();
             return;
         }
+
+        const ahora = performance.now();
+
+        if (ahora > this.cooldownVolumenRK) {
+            if (estado.izquierda || this.teclasRK.LEFT.isDown) {
+                this.cambiarVolumenModo(-0.05);
+                this.cooldownVolumenRK = ahora + 180;
+            } else if (estado.derecha || this.teclasRK.RIGHT.isDown) {
+                this.cambiarVolumenModo(0.05);
+                this.cooldownVolumenRK = ahora + 180;
+            }
+        }
     }
 
-    _obtenerPadRK() {
-        if (!this.input || !this.input.gamepad) return null;
+    obtenerMandosModo() {
+        let pads = [];
 
-        const gamepadPlugin = this.input.gamepad;
-
-        if (typeof gamepadPlugin.getPad === 'function') {
-            return gamepadPlugin.getPad(0);
+        if (navigator.getGamepads) {
+            pads = Array.from(navigator.getGamepads())
+                .filter(pad => pad !== null && pad !== undefined);
         }
 
-        if (
-            gamepadPlugin.gamepads &&
-            gamepadPlugin.gamepads.length > 0
-        ) {
-            return gamepadPlugin.gamepads[0];
+        if (pads.length === 0 && this.input && this.input.gamepad) {
+            const manager = this.input.gamepad;
+
+            if (typeof manager.getAll === 'function') {
+                pads = manager.getAll();
+            } else if (Array.isArray(manager.gamepads)) {
+                pads = manager.gamepads;
+            } else {
+                if (manager.pad1) pads.push(manager.pad1);
+                if (manager.pad2) pads.push(manager.pad2);
+                if (manager.pad3) pads.push(manager.pad3);
+                if (manager.pad4) pads.push(manager.pad4);
+            }
         }
 
-        if (typeof gamepadPlugin.getAll === 'function') {
-            const pads = gamepadPlugin.getAll();
-            return pads && pads.length > 0 ? pads[0] : null;
-        }
-
-        return null;
+        return pads.filter(pad => pad !== null && pad !== undefined);
     }
 
-    _botonRKJustDown(nombre) {
-        const mapa = {
-            X: [2, 3],
-            B: [1],
-            R1: [5, 7],
-            L1: [4, 6]
+    _crearEstadoVacioModo() {
+        return {
+            x: false,
+            b: false,
+            l1: false,
+            r1: false,
+            izquierda: false,
+            derecha: false
         };
+    }
 
-        const indices = mapa[nombre];
+    _obtenerIdPadModo(pad, fallbackIndex) {
+        if (!pad) return `pad_${fallbackIndex}`;
 
-        if (!indices) return false;
-
-        const pad = this._obtenerPadRK();
-
-        if (!pad || !pad.buttons) {
-            this.estadoBotonesRK[nombre] = false;
-            return false;
+        if (typeof pad.index === 'number') {
+            return `slot_${pad.index}`;
         }
 
-        const presionado = indices.some(index => {
-            const boton = pad.buttons[index];
+        if (pad.id) {
+            return `pad_${pad.id}`;
+        }
 
-            if (!boton) return false;
+        return `pad_${fallbackIndex}`;
+    }
 
-            return boton.pressed === true || boton.value > 0.35;
+    leerInputTodosLosMandosModo() {
+        const pads = this.obtenerMandosModo();
+
+        const estadoFinal = this._crearEstadoVacioModo();
+        const justDownFinal = this._crearEstadoVacioModo();
+
+        if (!this.estadoBotonesPorPad) {
+            this.estadoBotonesPorPad = {};
+        }
+
+        pads.forEach((pad, fallbackIndex) => {
+            const idPad = this._obtenerIdPadModo(pad, fallbackIndex);
+            const estadoActual = this.leerEstadoModo(pad);
+            const estadoAnterior =
+                this.estadoBotonesPorPad[idPad] ||
+                this._crearEstadoVacioModo();
+
+            Object.keys(estadoFinal).forEach(key => {
+                estadoFinal[key] =
+                    estadoFinal[key] ||
+                    estadoActual[key];
+
+                justDownFinal[key] =
+                    justDownFinal[key] ||
+                    (estadoActual[key] && !estadoAnterior[key]);
+            });
+
+            this.estadoBotonesPorPad[idPad] = { ...estadoActual };
         });
 
-        const antes = this.estadoBotonesRK[nombre] || false;
+        return {
+            estado: estadoFinal,
+            justDown: justDownFinal,
+            cantidadMandos: pads.length,
+            mandos: pads
+        };
+    }
 
-        this.estadoBotonesRK[nombre] = presionado;
+    _esMandoPlayModo(pad) {
+        if (!pad) return false;
 
-        return presionado && !antes;
+        const id = (pad.id || pad.idName || '').toLowerCase();
+
+        return (
+            id.includes('wireless controller') ||
+            id.includes('dualshock') ||
+            id.includes('dualsense') ||
+            id.includes('playstation') ||
+            id.includes('ps4') ||
+            id.includes('ps5')
+        );
+    }
+
+    leerEstadoModo(pad) {
+        const esPlay = this._esMandoPlayModo(pad);
+        const ejeFlechasRK = this.leerEjeModo(pad, this.RK_AXIS_FLECHAS);
+
+        // PlayStation:
+        // Cuadrado = 2
+        // Círculo = 1
+        // L1 = 4
+        // R1 = 5
+        // Cruceta izquierda = 14
+        // Cruceta derecha = 15
+        const playX = this.botonModo(pad, 2);
+        const playB = this.botonModo(pad, 1);
+        const playL1 = this.botonModo(pad, 4);
+        const playR1 = this.botonModo(pad, 5);
+        const playIzquierda = this.botonModo(pad, 14);
+        const playDerecha = this.botonModo(pad, 15);
+
+        // RK Game:
+        // X = 2 o 3 según mapeo
+        // B = 1
+        // L1 = 6
+        // R1 = 5 o 7
+        // Flechitas por axis 9.
+        const rkX =
+            this.botonModo(pad, 2) ||
+            this.botonModo(pad, 3);
+
+        const rkB = this.botonModo(pad, 1);
+
+        const rkL1 = this.botonModo(pad, 6);
+
+        const rkR1 =
+            this.botonModo(pad, 5) ||
+            this.botonModo(pad, 7);
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= this.RK_HAT_IZQUIERDA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_IZQUIERDA_MAX;
+
+        const rkDerechaHat =
+            ejeFlechasRK >= this.RK_HAT_DERECHA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_DERECHA_MAX;
+
+        const rkIzquierda =
+            rkIzquierdaHat ||
+            this.botonModo(pad, 14) ||
+            this.botonModo(pad, 16) ||
+            this.botonModo(pad, 18);
+
+        const rkDerecha =
+            rkDerechaHat ||
+            this.botonModo(pad, 15) ||
+            this.botonModo(pad, 17) ||
+            this.botonModo(pad, 19);
+
+        return {
+            x: esPlay ? playX : rkX,
+            b: esPlay ? playB : rkB,
+            l1: esPlay ? playL1 : rkL1,
+            r1: esPlay ? playR1 : rkR1,
+            izquierda: esPlay ? playIzquierda : rkIzquierda,
+            derecha: esPlay ? playDerecha : rkDerecha
+        };
+    }
+
+    leerEjeModo(pad, index) {
+        if (!pad) return 0;
+
+        let valor = 0;
+
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                valor = eje.getValue();
+            } else if (typeof eje === 'number') {
+                valor = eje;
+            } else if (typeof eje.value === 'number') {
+                valor = eje.value;
+            }
+        } else if (index === 0 && pad.leftStick) {
+            valor = pad.leftStick.x || 0;
+        } else if (index === 1 && pad.leftStick) {
+            valor = pad.leftStick.y || 0;
+        }
+
+        return valor;
+    }
+
+    botonModo(pad, index) {
+        if (!pad) return false;
+
+        if (pad.buttons && pad.buttons[index] != null) {
+            const boton = pad.buttons[index];
+
+            if (typeof boton.pressed === 'boolean') {
+                return boton.pressed;
+            }
+
+            if (typeof boton.value === 'number') {
+                return boton.value > 0.35;
+            }
+
+            if (typeof boton.getValue === 'function') {
+                return boton.getValue() > 0.35;
+            }
+        }
+
+        if (index === 4 && pad.L1) return pad.L1.pressed || false;
+        if (index === 5 && pad.R1) return pad.R1.pressed || false;
+        if (index === 6 && pad.L2) return pad.L2.pressed || false;
+        if (index === 7 && pad.R2) return pad.R2.pressed || false;
+
+        return false;
+    }
+
+    cambiarVolumenModo(cambio) {
+        const nuevoVolumen = Phaser.Math.Clamp(this.volumenActual + cambio, 0, 1);
+
+        this._guardarVolumenGlobal(nuevoVolumen);
+
+        if (this.sonidoContexto) {
+            this.sonidoContexto.setVolume(this.volumenActual);
+        }
+
+        this.actualizarUIVolumen();
     }
 
     intentarAvanzar() {
@@ -674,6 +906,7 @@ export class ModoJuego extends Phaser.Scene {
         this.sliderZone.setInteractive({ cursor: 'pointer' });
 
         this.sliderZone.on('pointerdown', (pointer) => {
+            if (this.yaTransicionando) return;
             this.arrastrandoVolumen = true;
             this.actualizarVolumenDesdePointer(pointer.x);
         });
@@ -712,12 +945,19 @@ export class ModoJuego extends Phaser.Scene {
         const xClamped = Phaser.Math.Clamp(pointerX, izquierda, derecha);
         const ratio = (xClamped - izquierda) / this.sliderWidth;
 
-        this.volumenActual = Phaser.Math.Clamp(ratio, 0, 1);
-        this.game.registry.set('volumenGlobal', this.volumenActual);
+        this._guardarVolumenGlobal(ratio);
 
         if (this.sonidoContexto) {
             this.sonidoContexto.setVolume(this.volumenActual);
         }
+
+        this.actualizarUIVolumen();
+    }
+
+    actualizarUIVolumen() {
+        if (!this.sliderFill || !this.sliderGlow || !this.sliderKnob) return;
+
+        const izquierda = this.sliderX - this.sliderWidth / 2;
 
         this.sliderFill.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
         this.sliderGlow.displayWidth = Math.max(4, this.sliderWidth * this.volumenActual);
@@ -736,6 +976,32 @@ export class ModoJuego extends Phaser.Scene {
         }
     }
 
+    _crearEstadoPartidaLimpio() {
+        return {
+            diaActual: 1,
+            modoSoloFondo: false,
+            transicionEntrada: true,
+
+            delitosEncontrados: [],
+            estadoBuscadorPorDia: {},
+            sancionesAsignadas: {},
+
+            vidasDiaActual: 4,
+            penalizacionDia: 0,
+
+            puntajeDia: {
+                total: 0,
+                totalBruto: 0,
+                bonusMinijuego: 0,
+                detalleDias: []
+            },
+
+            cabecillaElegida: null,
+            cabecillaCorrecto: null,
+            penalizacionesCabecillaDia6: 0
+        };
+    }
+
     irAlJuego() {
         this.yaTransicionando = true;
 
@@ -752,13 +1018,26 @@ export class ModoJuego extends Phaser.Scene {
         this.cameras.main.fadeOut(420, 0, 0, 0);
 
         this.time.delayedCall(420, () => {
-            this.scene.start('Ventana1', {
+            resetPersonajesPartida();
+
+            const estadoLimpio = this._crearEstadoPartidaLimpio();
+
+            const datosNuevaPartida = {
+                ...estadoLimpio,
+
                 diaActual: 1,
+                modoSoloFondo: false,
                 transicionEntrada: true,
                 volumenActual: this.volumenActual,
+
                 modoJuego: this.modoSeleccionado,
                 jugadores: this.modoSeleccionado === '2P' ? 2 : 1
-            });
+            };
+
+            this.game.registry.set('partidaActual', datosNuevaPartida);
+
+            this.scene.start('Ventana1', datosNuevaPartida);
         });
     }
+
 }

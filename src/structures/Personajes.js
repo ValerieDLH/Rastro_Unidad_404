@@ -3,336 +3,390 @@ import { ArbolB } from './ArbolB.js';
 import { Sanciones } from './Sanciones.js';
 
 // =========================================================
-//  DÍA 1
+//  NOMBRES DISPONIBLES
+//  Estos nombres se mezclan cada nueva partida.
 // =========================================================
-const Abril = new NodoB(5, 'Abril', true,
-    '"Valeria, tus publicaciones dan pena y todos se burlan de ti." /// Pista: observa si el mensaje busca humillar públicamente a Valeria o afectar su dignidad frente a otros.',
-    1, 1, Sanciones[1][0], true, 0);
-
-const Adam = new NodoB(5, 'Adam', true,
-    '"Cada día voy a recordarte lo ridícula que eres." /// Pista: revisa si la conducta anuncia repetición o insistencia contra Valeria, no solo un comentario aislado.',
-    11, 1, Sanciones[1][1], true, 25);
-
-const Allison = new NodoB(5, 'Allison', true,
-    '"Cada vez que publiques, volveré a burlarme de ti." /// Pista: fíjate si la acción depende de repetirse cada vez que Valeria participa en redes.',
-    11, 1, Sanciones[1][1], true, -10);
-
-const Alma = new NodoB(5, 'Alma', true,
-    '"[Reaccionó con burlas en muchas publicaciones de Valeria.]" /// Pista: analiza si las acciones repetidas alteran la tranquilidad digital de Valeria aunque no haya una amenaza directa.',
-    12, 1, Sanciones[1][2], true, -25);
-
-const Ana = new NodoB(5, 'Ana', true,
-    '"[Dejó burlas constantes en fotos de Valeria durante varios días.]" /// Pista: observa si hay una molestia continua que afecta la paz de Valeria en su espacio digital.',
-    12, 1, Sanciones[1][2], true, -40);
-
-const Andres = new NodoB(5, 'Andres', false,
-    '"Valeria, si necesitas apoyo, puedo acompañarte a hablar con alguien." /// Pista: revisa si la intervención busca proteger o acompañar a Valeria en lugar de dañarla.',
-    -53, 1, null, false, null);
-
-const Anthony = new NodoB(5, 'Anthony', false,
-    '"[No comentó ni compartió nada contra Valeria.]" /// Pista: verifica si existe una acción concreta que cause daño o si no hay participación relevante.',
-    -54, 1, null, false, null);
-
-const Ben = new NodoB(5, 'Ben', false,
-    '"Dejen de molestar a Valeria por lo que publica." /// Pista: identifica si la persona está aumentando el daño o intentando detenerlo.',
-    -55, 1, null, false, null);
-
-const Bruno = new NodoB(5, 'Bruno', false,
-    '"Profe, tengo capturas de lo que le están haciendo a Valeria." /// Pista: analiza si la acción busca aportar evidencia para resolver el caso o participar en el ataque.',
-    -56, 1, null, false, null);
-
-const Camila = new NodoB(5, 'Camila', false,
-    '"[Vio la situación, pero no participó ni difundió nada.]" /// Pista: revisa si la persona realizó una acción dañina o si solo estuvo presente sin intervenir.',
-    -57, 1, null, false, null);
-
-
-// =========================================================
-//  DÍA 2
-// =========================================================
-const Camilo = new NodoB(5, 'Camilo', true,
-    '"Compartan esto para que todos vean lo vergonzosa que es Valeria." /// Pista: observa si el daño aumenta porque el mensaje busca que más personas lo vean o lo compartan.',
-    2, 2, Sanciones[2][0], true, 63);
-
-const Clara = new NodoB(5, 'Clara', true,
-    '"Comentemos todos hasta que Valeria cierre su cuenta." /// Pista: revisa si se está llamando a otras personas a presionar digitalmente a Valeria.',
-    21, 2, Sanciones[2][1], true, 5);
-
-const Cora = new NodoB(5, 'Cora', true,
-    '"No le hablen y hagan que se sienta sola." /// Pista: analiza si la conducta busca aislar, presionar o afectar socialmente a Valeria desde el entorno digital.',
-    21, 2, Sanciones[2][1], true, 75);
-
-const Dani = new NodoB(5, 'Dani', true,
-    '"[Reenvió una publicación ofensiva de Valeria en varios grupos.]" /// Pista: fíjate si la persona ayudó a expandir contenido dañino hacia más espacios.',
-    22, 2, Sanciones[2][2], true, 85);
-
-const Diego = new NodoB(5, 'Diego', true,
-    '"Yo también lo pasaré por los grupos para que todos lo vean." /// Pista: observa si la acción no crea el daño inicial, pero sí ayuda a que llegue a más personas.',
-    22, 2, Sanciones[2][2], true, 20);
-
-const Dylan = new NodoB(5, 'Dylan', false,
-    '"Borré esa publicación porque podía hacerle daño a Valeria." /// Pista: revisa si la persona contribuye a frenar el daño o a extenderlo.',
-    -43, 2, null, false, null);
-
-const Elena = new NodoB(5, 'Elena', false,
-    '"[No comentó ni compartió contenido del caso.]" /// Pista: verifica si hay una acción digital que afecte a Valeria o si no existe intervención dañina.',
-    -44, 2, null, false, null);
-
-const Emma = new NodoB(5, 'Emma', false,
-    '"Me llegó la publicación, pero no la reenvié." /// Pista: analiza si recibir contenido es suficiente o si lo importante es haberlo difundido.',
-    -45, 2, null, false, null);
-
-const Eric = new NodoB(5, 'Eric', false,
-    '"Esto está empeorando y alguien debería ayudar a Valeria." /// Pista: observa si la intención del mensaje es alertar sobre el daño o participar en él.',
-    -46, 2, null, false, null);
-
-const Ethan = new NodoB(5, 'Ethan', false,
-    '"[Guardó capturas y las envió a directivas.]" /// Pista: revisa si la acción busca documentar el problema para ayudar o aumentar la exposición de Valeria.',
-    -47, 2, null, false, null);
-
-
-// =========================================================
-//  DÍA 3
-// =========================================================
-const Eva = new NodoB(5, 'Eva', true,
-    '"Valeria robó los exámenes y todos deberían saberlo." /// Pista: revisa si se está acusando a Valeria de un hecho grave sin mostrar pruebas confiables.',
-    4, 3, Sanciones[3][0], true, -3);
-
-const Fabio = new NodoB(5, 'Fabio', true,
-    '"Aquí está la captura donde Valeria supuestamente confiesa todo." /// Pista: analiza si la información compartida parece manipulada, dudosa o usada para dañar su imagen.',
-    41, 3, Sanciones[3][1], true, 8);
-
-const Irene = new NodoB(5, 'Irene', true,
-    '"Reenvíen esa captura para que Valeria no siga mintiendo." /// Pista: observa si la persona ayuda a circular una supuesta prueba sin verificarla.',
-    41, 3, Sanciones[3][1], true, 27);
-
-const Isabel = new NodoB(5, 'Isabel', true,
-    '"Algo raro hizo Valeria, aunque todavía no haya pruebas." /// Pista: fíjate si se dañan el buen nombre y la reputación de Valeria usando sospechas sin evidencia.',
-    42, 3, Sanciones[3][2], true, 35);
-
-const Isacc = new NodoB(5, 'Isacc', true,
-    '"Si todos hablan mal de Valeria, por algo será." /// Pista: revisa si el mensaje refuerza un rumor sin aportar pruebas concretas.',
-    42, 3, Sanciones[3][2], true, 50);
-
-const Jackson = new NodoB(5, 'Jackson', false,
-    '"Yo estuve allí y no vi nada raro con Valeria." /// Pista: analiza si la persona está creando un rumor o contradiciendo una acusación sin pruebas.',
-    -23, 3, null, false, null);
-
-const Joel = new NodoB(5, 'Joel', false,
-    '"[Recibió las capturas, pero no las compartió.]" /// Pista: distingue entre recibir información y participar activamente en su difusión.',
-    -24, 3, null, false, null);
-
-const Julia = new NodoB(5, 'Julia', false,
-    '"Le dije a quien me mandó eso que dejara de reenviarlo." /// Pista: observa si la persona intenta cortar la cadena de difusión o continuarla.',
-    -25, 3, null, false, null);
-
-const Kevin = new NodoB(5, 'Kevin', false,
-    '"[No tuvo actividad relacionada con el rumor.]" /// Pista: revisa si aparece una conducta concreta que afecte a Valeria.',
-    -26, 3, null, false, null);
-
-const Laura = new NodoB(5, 'Laura', false,
-    '"Esa captura parece editada y deberían revisarla bien." /// Pista: analiza si la persona está cuestionando una prueba dudosa o usándola para atacar.',
-    -27, 3, null, false, null);
-
-
-// =========================================================
-//  DÍA 4
-// =========================================================
-const Leo = new NodoB(5, 'Leo', true,
-    '"[Creó un perfil falso usando fotos de Valeria.]" /// Pista: revisa si alguien está usando la imagen o identidad de Valeria para aparentar ser ella.',
-    5, 4, Sanciones[4][0], true, -5);
-
-const Lina = new NodoB(5, 'Lina', true,
-    '"[Entró a la cuenta real de Valeria y publicó desde allí.]" /// Pista: observa si se usó una cuenta real de Valeria sin autorización.',
-    51, 4, Sanciones[4][1], true, -1);
-
-const Lucas = new NodoB(5, 'Lucas', true,
-    '"[Envió fotos de Valeria a varios grupos sin autorización.]" /// Pista: analiza si se compartió información o imágenes personales sin permiso.',
-    52, 4, Sanciones[4][2], true, 6);
-
-const Luis = new NodoB(5, 'Luis', true,
-    '"[Compartió el número y usuario de Valeria en privado.]" /// Pista: fíjate si se expusieron datos personales que podían afectar la seguridad o privacidad de Valeria.',
-    52, 4, Sanciones[4][2], true, 11);
-
-const Luisa = new NodoB(5, 'Luisa', true,
-    '"[Reunió fotos y contactos de Valeria para pasarlos a otros.]" /// Pista: observa si la persona recopiló y distribuyó información privada de Valeria.',
-    52, 4, Sanciones[4][2], true, 23);
-
-const Mia = new NodoB(5, 'Mia', true,
-    '"[Abrió una cuenta falsa y respondió mensajes como Valeria.]" /// Pista: revisa si se creó una apariencia falsa usando el nombre o imagen de Valeria.',
-    5, 4, Sanciones[4][0], true, -7);
-
-const Nico = new NodoB(5, 'Nico', true,
-    '"[Copió el nombre y fotos de Valeria para confundir a otros.]" /// Pista: analiza si la acción puede hacer creer a otras personas que están interactuando con Valeria.',
-    5, 4, Sanciones[4][0], true, -4);
-
-const Nora = new NodoB(5, 'Nora', true,
-    '"[La cuenta real de Valeria fue usada desde un dispositivo extraño.]" /// Pista: revisa si hay señales de ingreso o uso no permitido de una cuenta verdadera.',
-    51, 4, Sanciones[4][1], true, -2);
-
-const Oscar = new NodoB(5, 'Oscar', true,
-    '"[Cambió la biografía de la cuenta real de Valeria.]" /// Pista: observa si alguien modificó información dentro de un perfil que no le pertenecía.',
-    51, 4, Sanciones[4][1], true, 1);
-
-const Paula = new NodoB(5, 'Paula', true,
-    '"[Reenvió datos y fotos privadas de Valeria a grupos externos.]" /// Pista: analiza si la acción expone datos privados de Valeria a personas que no debían recibirlos.',
-    52, 4, Sanciones[4][2], true, 7);
-
-
-// =========================================================
-//  DÍA 5
-// =========================================================
-const Ronald = new NodoB(5, 'Ronald', true,
-    '"A las 8 todos comentamos hasta que Valeria desaparezca de redes." /// Pista: revisa si hay una organización de varias personas para atacar al mismo tiempo.',
-    3, 5, Sanciones[5][0], true, 29);
-
-const Rosa = new NodoB(5, 'Rosa', true,
-    '"Si sigues hablando, te va a ir muy mal." /// Pista: observa si el mensaje busca causar miedo para que Valeria deje de hablar o denunciar.',
-    31, 5, Sanciones[5][1], true, 33);
-
-const Ruben = new NodoB(5, 'Ruben', true,
-    '"No cuentes nada si sabes lo que te conviene." /// Pista: analiza si se usa intimidación para silenciar a Valeria.',
-    31, 5, Sanciones[5][1], true, 38);
-
-const Sara = new NodoB(5, 'Sara', true,
-    '"[Organizó horarios y tareas para atacar a Valeria.]" /// Pista: fíjate si hay reparto de funciones, planificación o coordinación entre varias personas.',
-    32, 5, Sanciones[5][2], true, 48);
-
-const Sofia = new NodoB(5, 'Sofia', true,
-    '"[Invitó personas al grupo y les indicó qué publicar.]" /// Pista: revisa si la persona ayuda a organizar participantes y mensajes dentro de un ataque grupal.',
-    32, 5, Sanciones[5][2], true, 16);
-
-const Tomas = new NodoB(5, 'Tomas', true,
-    '"[Indicó la hora para enviar mensajes contra Valeria.]" /// Pista: observa si existe una hora o instrucción común para que varias personas actúen juntas.',
-    3, 5, Sanciones[5][0], true, 26);
-
-const Tyler = new NodoB(5, 'Tyler', true,
-    '"[Publicó una lista con el orden de participación.]" /// Pista: analiza si hay una estructura organizada para decidir quién participa y cuándo.',
-    3, 5, Sanciones[5][0], true, 31);
-
-const Valen = new NodoB(5, 'Valen', true,
-    '"[Asignó roles para comentar, compartir y presionar.]" /// Pista: revisa si la conducta muestra reparto de tareas dentro de un grupo.',
-    32, 5, Sanciones[5][2], true, 34);
-
-const Violeta = new NodoB(5, 'Violeta', true,
-    '"[Preparó mensajes para que todos copiaran el mismo ataque.]" /// Pista: observa si se preparó contenido común para que varias personas lo repitieran.',
-    32, 5, Sanciones[5][2], true, 36);
-
-const Zoe = new NodoB(5, 'Zoe', true,
-    '"Si denuncias, después no digas que no te avisamos." /// Pista: analiza si el mensaje intenta impedir que Valeria denuncie usando miedo o advertencias.',
-    31, 5, Sanciones[5][1], true, 39);
-
-
-// =========================================================
-//  REFERENCIAS ABB
-// =========================================================
-Abril._izqReal = Alma; Alma._padreReal = Abril;
-Abril._derReal = Adam; Adam._padreReal = Abril;
-
-Alma._izqReal = Ana; Ana._padreReal = Alma;
-Alma._derReal = Allison; Allison._padreReal = Alma;
-
-Adam._izqReal = Camilo; Camilo._padreReal = Adam;
-Adam._derReal = Sofia; Sofia._padreReal = Adam;
-
-Camilo._izqReal = Clara; Clara._padreReal = Camilo;
-Camilo._derReal = Diego; Diego._padreReal = Camilo;
-
-Clara._izqReal = Eva; Eva._padreReal = Clara;
-Diego._izqReal = Fabio; Fabio._padreReal = Diego;
-
-Sofia._izqReal = Cora; Cora._padreReal = Sofia;
-Sofia._derReal = Dani; Dani._padreReal = Sofia;
-
-Eva._izqReal = Leo; Leo._padreReal = Eva;
-Eva._derReal = Lina; Lina._padreReal = Eva;
-
-Fabio._izqReal = Lucas; Lucas._padreReal = Fabio;
-Fabio._derReal = Luis; Luis._padreReal = Fabio;
-
-Cora._izqReal = Irene; Irene._padreReal = Cora;
-Cora._derReal = Isabel; Isabel._padreReal = Cora;
-
-Dani._izqReal = Isacc; Isacc._padreReal = Dani;
-
-Leo._izqReal = Mia; Mia._padreReal = Leo;
-Leo._derReal = Nico; Nico._padreReal = Leo;
-
-Lina._izqReal = Nora; Nora._padreReal = Lina;
-Lina._derReal = Oscar; Oscar._padreReal = Lina;
-
-Lucas._derReal = Paula; Paula._padreReal = Lucas;
-
-Irene._izqReal = Luisa; Luisa._padreReal = Irene;
-Irene._derReal = Ronald; Ronald._padreReal = Irene;
-
-Isabel._izqReal = Rosa; Rosa._padreReal = Isabel;
-Isabel._derReal = Ruben; Ruben._padreReal = Isabel;
-
-Isacc._izqReal = Sara; Sara._padreReal = Isacc;
-
-Ronald._izqReal = Tomas; Tomas._padreReal = Ronald;
-Ronald._derReal = Tyler; Tyler._padreReal = Ronald;
-
-Rosa._izqReal = Valen; Valen._padreReal = Rosa;
-Rosa._derReal = Violeta; Violeta._padreReal = Rosa;
-
-Ruben._derReal = Zoe; Zoe._padreReal = Ruben;
-
-
-// =========================================================
-//  ÍNDICE GLOBAL
-// =========================================================
-export const TodosLosPersonajes = [
-    Abril, Adam, Allison, Alma, Ana, Andres, Anthony, Ben, Bruno, Camila,
-    Camilo, Clara, Cora, Dani, Diego, Dylan, Elena, Emma, Eric, Ethan,
-    Eva, Fabio, Irene, Isabel, Isacc, Jackson, Joel, Julia, Kevin, Laura,
-    Leo, Lina, Lucas, Luis, Luisa, Mia, Nico, Nora, Oscar, Paula,
-    Ronald, Rosa, Ruben, Sara, Sofia, Tomas, Tyler, Valen, Violeta, Zoe
+const NOMBRES_PERSONAJES = [
+    'Abril', 'Adam', 'Allison', 'Alma', 'Ana',
+    'Andres', 'Anthony', 'Ben', 'Bruno', 'Camila',
+    'Camilo', 'Clara', 'Cora', 'Dani', 'Diego',
+    'Dylan', 'Elena', 'Emma', 'Eric', 'Ethan',
+    'Eva', 'Fabio', 'Irene', 'Isabel', 'Isacc',
+    'Jackson', 'Joel', 'Julia', 'Kevin', 'Laura',
+    'Leo', 'Lina', 'Lucas', 'Luis', 'Luisa',
+    'Mia', 'Nico', 'Nora', 'Oscar', 'Paula',
+    'Ronald', 'Rosa', 'Ruben', 'Sara', 'Sofia',
+    'Tomas', 'Tyler', 'Valen', 'Violeta', 'Zoe'
 ];
 
-export const Dias = {
-    1: [Abril, Adam, Allison, Alma, Ana, Andres, Anthony, Ben, Bruno, Camila],
-    2: [Camilo, Clara, Cora, Dani, Diego, Dylan, Elena, Emma, Eric, Ethan],
-    3: [Eva, Fabio, Irene, Isabel, Isacc, Jackson, Joel, Julia, Kevin, Laura],
-    4: [Leo, Lina, Lucas, Luis, Luisa, Mia, Nico, Nora, Oscar, Paula],
-    5: [Ronald, Rosa, Ruben, Sara, Sofia, Tomas, Tyler, Valen, Violeta, Zoe]
-};
-
-
 // =========================================================
-//  CONFIGURACIÓN PARA EL ÁRBOL / BUSCADOR DIARIO
+//  CASOS POR DÍA
+//  El día define el tipo de caso, delito y sanción.
+//  El nombre del personaje se asigna aleatoriamente.
 // =========================================================
-const configDias = {
+const CASOS_POR_DIA = {
     1: {
-        delitosFijos: [Abril, Adam, Allison, Alma],
-        inocentes: [Andres, Anthony, Ben, Bruno, Camila]
+        delitos: [
+            {
+                texto: '"Valeria, tus publicaciones dan pena y todos se burlan de ti." /// Pista: insulto directo que daña su dignidad.',
+                rango: 1,
+                sancion: Sanciones[1][0],
+                activo: true,
+                posicion: 0
+            },
+            {
+                texto: '"Cada día voy a recordarte lo ridícula que eres." /// Pista: molestia repetida contra Valeria.',
+                rango: 11,
+                sancion: Sanciones[1][1],
+                activo: true,
+                posicion: 25
+            },
+            {
+                texto: '"Cada vez que publiques, volveré a burlarme de ti." /// Pista: burla repetida cada vez que Valeria publica.',
+                rango: 11,
+                sancion: Sanciones[1][1],
+                activo: true,
+                posicion: -10
+            },
+            {
+                texto: '"[Reaccionó con burlas en muchas publicaciones de Valeria.]" /// Pista: varias burlas alteran su tranquilidad.',
+                rango: 12,
+                sancion: Sanciones[1][2],
+                activo: true,
+                posicion: -25
+            },
+            {
+                texto: '"[Dejó burlas constantes en fotos de Valeria durante varios días.]" /// Pista: molestia continua en sus redes.',
+                rango: 12,
+                sancion: Sanciones[1][2],
+                activo: true,
+                posicion: -40
+            }
+        ],
+        inocentes: [
+            {
+                texto: '"Valeria, si necesitas apoyo, puedo acompañarte a hablar con alguien." /// Pista: ayuda a Valeria.',
+                rango: -53,
+                posicion: null
+            },
+            {
+                texto: '"[No comentó ni compartió nada contra Valeria.]" /// Pista: no participa en el daño.',
+                rango: -54,
+                posicion: null
+            },
+            {
+                texto: '"Dejen de molestar a Valeria por lo que publica." /// Pista: intenta detener la agresión.',
+                rango: -55,
+                posicion: null
+            },
+            {
+                texto: '"Profe, tengo capturas de lo que le están haciendo a Valeria." /// Pista: aporta evidencia.',
+                rango: -56,
+                posicion: null
+            },
+            {
+                texto: '"[Vio la situación, pero no participó ni difundió nada.]" /// Pista: no realizó una acción dañina.',
+                rango: -57,
+                posicion: null
+            }
+        ],
+        cantidadDelitos: 4,
+        cantidadInocentes: 1
     },
+
     2: {
-        principales: [Camilo],
-        secundariosA: [Clara, Cora],
-        secundariosB: [Dani, Diego],
-        inocentes: [Dylan, Elena, Emma, Eric, Ethan]
+        delitos: [
+            // INJURIA AGRAVADA POR MEDIOS DIGITALES
+            // Clave: insulto directo o humillación pública.
+            {
+                texto: '"Valeria es una inútil y una vergüenza para todos." /// Pista: insulto público directo.',
+                rango: 2,
+                sancion: Sanciones[2][0],
+                activo: true,
+                posicion: 63
+            },
+            {
+                texto: '"Miren a Valeria, da pena verla hacer el ridículo." /// Pista: humillación pública con insultos.',
+                rango: 2,
+                sancion: Sanciones[2][0],
+                activo: true,
+                posicion: 20
+            },
+
+            // HOSTIGAMIENTO DIGITAL
+            // Clave: persecución directa para presionarla o aislarla.
+            {
+                texto: '"No le respondan a Valeria y sáquenla de todos los grupos." /// Pista: presión directa para aislarla.',
+                rango: 21,
+                sancion: Sanciones[2][1],
+                activo: true,
+                posicion: 5
+            },
+            {
+                texto: '"Cada vez que Valeria aparezca, la vamos a perseguir hasta que se vaya." /// Pista: persecución directa contra ella.',
+                rango: 21,
+                sancion: Sanciones[2][1],
+                activo: true,
+                posicion: 75
+            },
+
+            // PERTURBACIÓN A LA TRANQUILIDAD AGRAVADA
+            // Clave: spam, llamadas, notificaciones o mensajes insistentes que no la dejan tranquila.
+            {
+                texto: '"Envíenle mensajes sin parar para llenarle las notificaciones." /// Pista: spam que altera su tranquilidad.',
+                rango: 22,
+                sancion: Sanciones[2][2],
+                activo: true,
+                posicion: 85
+            },
+            {
+                texto: '"Etiquétenla en muchas publicaciones para que el celular no deje de sonar." /// Pista: molestias repetidas por notificaciones.',
+                rango: 22,
+                sancion: Sanciones[2][2],
+                activo: true,
+                posicion: 35
+            }
+        ],
+
+        inocentes: [
+            {
+                texto: '"Borré esa publicación porque podía hacerle daño a Valeria." /// Pista: frena la difusión.',
+                rango: -43,
+                posicion: null
+            },
+            {
+                texto: '"[No comentó ni compartió contenido del caso.]" /// Pista: no hay acción dañina.',
+                rango: -44,
+                posicion: null
+            },
+            {
+                texto: '"Me llegó la publicación, pero no la reenvié." /// Pista: no difundió el contenido.',
+                rango: -45,
+                posicion: null
+            },
+            {
+                texto: '"Esto está empeorando y alguien debería ayudar a Valeria." /// Pista: alerta sobre el daño.',
+                rango: -46,
+                posicion: null
+            },
+            {
+                texto: '"[Guardó capturas y las envió a directivas.]" /// Pista: documenta para ayudar.',
+                rango: -47,
+                posicion: null
+            }
+        ],
+
+        cantidadDelitos: 3,
+        cantidadInocentes: 2
     },
     3: {
-        principales: [Eva],
-        secundariosA: [Fabio, Irene],
-        secundariosB: [Isabel, Isacc],
-        inocentes: [Jackson, Joel, Julia, Kevin, Laura]
+        delitos: [
+            {
+                texto: '"Valeria robó los exámenes y todos deberían saberlo." /// Pista: acusación grave sin pruebas.',
+                rango: 4,
+                sancion: Sanciones[3][0],
+                activo: true,
+                posicion: -3
+            },
+            {
+                texto: '"Aquí está la captura donde Valeria supuestamente confiesa todo." /// Pista: prueba dudosa usada contra ella.',
+                rango: 41,
+                sancion: Sanciones[3][1],
+                activo: true,
+                posicion: 8
+            },
+            {
+                texto: '"Reenvíen esa captura para que Valeria no siga mintiendo." /// Pista: circula una prueba sin verificar.',
+                rango: 41,
+                sancion: Sanciones[3][1],
+                activo: true,
+                posicion: 27
+            },
+            {
+                texto: '"Algo raro hizo Valeria, aunque todavía no haya pruebas." /// Pista: sospecha sin evidencia.',
+                rango: 42,
+                sancion: Sanciones[3][2],
+                activo: true,
+                posicion: 35
+            },
+            {
+                texto: '"Si todos hablan mal de Valeria, por algo será." /// Pista: refuerza rumores sin pruebas.',
+                rango: 42,
+                sancion: Sanciones[3][2],
+                activo: true,
+                posicion: 50
+            }
+        ],
+        inocentes: [
+            {
+                texto: '"Yo estuve allí y no vi nada raro con Valeria." /// Pista: contradice el rumor.',
+                rango: -23,
+                posicion: null
+            },
+            {
+                texto: '"[Recibió las capturas, pero no las compartió.]" /// Pista: no difundió la información.',
+                rango: -24,
+                posicion: null
+            },
+            {
+                texto: '"Le dije a quien me mandó eso que dejara de reenviarlo." /// Pista: corta la cadena de difusión.',
+                rango: -25,
+                posicion: null
+            },
+            {
+                texto: '"[No tuvo actividad relacionada con el rumor.]" /// Pista: no participa en el caso.',
+                rango: -26,
+                posicion: null
+            },
+            {
+                texto: '"Esa captura parece editada y deberían revisarla bien." /// Pista: pide verificar la prueba.',
+                rango: -27,
+                posicion: null
+            }
+        ],
+        cantidadDelitos: 3,
+        cantidadInocentes: 2
     },
+
     4: {
-        tipo0: [Leo, Mia, Nico],
-        tipo1: [Lina, Nora, Oscar],
-        tipo2: [Lucas, Luis, Luisa, Paula]
+        delitos: [
+            {
+                texto: '"[Creó un perfil falso usando fotos de Valeria.]" /// Pista: se hace pasar por Valeria.',
+                rango: 5,
+                sancion: Sanciones[4][0],
+                activo: true,
+                posicion: -5
+            },
+            {
+                texto: '"[Entró a la cuenta real de Valeria y publicó desde allí.]" /// Pista: usa una cuenta ajena.',
+                rango: 51,
+                sancion: Sanciones[4][1],
+                activo: true,
+                posicion: -1
+            },
+            {
+                texto: '"[Envió fotos de Valeria a varios grupos sin autorización.]" /// Pista: comparte fotos sin permiso.',
+                rango: 52,
+                sancion: Sanciones[4][2],
+                activo: true,
+                posicion: 6
+            },
+            {
+                texto: '"[Compartió el número y usuario de Valeria en privado.]" /// Pista: expone datos personales.',
+                rango: 52,
+                sancion: Sanciones[4][2],
+                activo: true,
+                posicion: 11
+            },
+            {
+                texto: '"[Reunió fotos y contactos de Valeria para pasarlos a otros.]" /// Pista: distribuye información privada.',
+                rango: 52,
+                sancion: Sanciones[4][2],
+                activo: true,
+                posicion: 23
+            }
+        ],
+        inocentes: [
+            {
+                texto: '"[Reportó una cuenta falsa que usaba fotos de Valeria.]" /// Pista: ayuda a denunciar.',
+                rango: -13,
+                posicion: null
+            },
+            {
+                texto: '"[Cambió su propia contraseña por seguridad.]" /// Pista: protege su cuenta.',
+                rango: -14,
+                posicion: null
+            },
+            {
+                texto: '"[Avisó que estaban compartiendo datos privados de Valeria.]" /// Pista: alerta sobre el riesgo.',
+                rango: -15,
+                posicion: null
+            }
+        ],
+        cantidadDelitos: 5,
+        cantidadInocentes: 0
     },
+
     5: {
-        tipo0: [Ronald, Tomas, Tyler],
-        tipo1: [Rosa, Ruben, Zoe],
-        tipo2: [Sara, Sofia, Valen, Violeta]
+        delitos: [
+            {
+                texto: '"A las 8 todos comentamos hasta que Valeria desaparezca de redes." /// Pista: ataque grupal organizado.',
+                rango: 3,
+                sancion: Sanciones[5][0],
+                activo: true,
+                posicion: 29
+            },
+            {
+                texto: '"Si sigues hablando, te va a ir muy mal." /// Pista: intenta asustarla.',
+                rango: 31,
+                sancion: Sanciones[5][1],
+                activo: true,
+                posicion: 33
+            },
+            {
+                texto: '"No cuentes nada si sabes lo que te conviene." /// Pista: la intimida para que calle.',
+                rango: 31,
+                sancion: Sanciones[5][1],
+                activo: true,
+                posicion: 38
+            },
+            {
+                texto: '"[Organizó horarios y tareas para atacar a Valeria.]" /// Pista: reparte tareas del ataque.',
+                rango: 32,
+                sancion: Sanciones[5][2],
+                activo: true,
+                posicion: 48
+            },
+            {
+                texto: '"[Invitó personas al grupo y les indicó qué publicar.]" /// Pista: coordina participantes.',
+                rango: 32,
+                sancion: Sanciones[5][2],
+                activo: true,
+                posicion: 16
+            }
+        ],
+        inocentes: [
+            {
+                texto: '"[Salió del grupo cuando vio que atacarían a Valeria.]" /// Pista: no participa en el ataque.',
+                rango: -33,
+                posicion: null
+            },
+            {
+                texto: '"[Guardó evidencia del grupo para entregarla.]" /// Pista: ayuda a probar lo ocurrido.',
+                rango: -34,
+                posicion: null
+            }
+        ],
+        cantidadDelitos: 5,
+        cantidadInocentes: 0
     }
 };
 
-function escogerUno(lista) {
-    return lista[Math.floor(Math.random() * lista.length)];
+// =========================================================
+//  VARIABLES EXPORTADAS
+//  Se actualizan cada vez que se resetea la partida.
+// =========================================================
+export let TodosLosPersonajes = [];
+export let Dias = {};
+export let implicadosTotales = [];
+export let conexionesMaestras = [];
+export let desbloqueoPorDia = {};
+export const arbolDias = {};
+
+let seleccionPartidaActual = {};
+
+// =========================================================
+//  FUNCIONES AUXILIARES
+// =========================================================
+function mezclarArray(lista) {
+    const copia = [...lista];
+
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copia[i], copia[j]] = [copia[j], copia[i]];
+    }
+
+    return copia;
 }
 
 function escogerVariosSinRepetir(lista, cantidad) {
@@ -348,74 +402,302 @@ function escogerVariosSinRepetir(lista, cantidad) {
     return resultado;
 }
 
-function mezclarArray(lista) {
-    const copia = [...lista];
-
-    for (let i = copia.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [copia[i], copia[j]] = [copia[j], copia[i]];
+function obtenerClaveTipoDelito(caso) {
+    if (caso.sancion && caso.sancion.nombre) {
+        return caso.sancion.nombre;
     }
 
-    return copia;
+    return `tipo_${caso.rango}`;
 }
 
-let seleccionPartidaActual = {};
-export const arbolDias = {};
+function escogerDelitosUsandoTodosLosTipos(delitosBase, cantidadDelitos) {
+    const delitos = delitosBase.map(caso => ({
+        ...caso,
+        delito: true
+    }));
 
-export function resetPersonajesPartida() {
-    seleccionPartidaActual = {};
-    Object.keys(arbolDias).forEach(k => delete arbolDias[k]);
+    const grupos = {};
+
+    delitos.forEach(caso => {
+        const clave = obtenerClaveTipoDelito(caso);
+
+        if (!grupos[clave]) {
+            grupos[clave] = [];
+        }
+
+        grupos[clave].push(caso);
+    });
+
+    const tipos = Object.keys(grupos);
+    const seleccionados = [];
+
+    tipos.forEach(tipo => {
+        const opciones = grupos[tipo];
+        const elegido = escogerVariosSinRepetir(opciones, 1)[0];
+
+        if (elegido) {
+            seleccionados.push(elegido);
+        }
+    });
+
+    if (seleccionados.length > cantidadDelitos) {
+        return mezclarArray(seleccionados).slice(0, cantidadDelitos);
+    }
+
+    let faltan = cantidadDelitos - seleccionados.length;
+
+    const restantes = delitos.filter(caso => {
+        return !seleccionados.some(sel =>
+            sel.texto === caso.texto &&
+            sel.rango === caso.rango &&
+            obtenerClaveTipoDelito(sel) === obtenerClaveTipoDelito(caso)
+        );
+    });
+
+    const extras = mezclarArray(restantes).slice(0, faltan);
+    seleccionados.push(...extras);
+
+    faltan = cantidadDelitos - seleccionados.length;
+
+    while (faltan > 0 && delitos.length > 0) {
+        const copia = {
+            ...delitos[Math.floor(Math.random() * delitos.length)]
+        };
+
+        seleccionados.push(copia);
+        faltan--;
+    }
+
+    return mezclarArray(seleccionados);
 }
 
-function generarVectorDia(dia) {
-    const cfg = configDias[dia];
+function tomarNombre(nombresDisponibles) {
+    if (!nombresDisponibles.length) {
+        return `Persona_${Math.floor(Math.random() * 9999)}`;
+    }
+
+    return nombresDisponibles.shift();
+}
+
+function crearNodoDesdeCaso(nombre, caso, dia) {
+    return new NodoB(
+        5,
+        nombre,
+        caso.delito === true,
+        caso.texto,
+        caso.rango,
+        dia,
+        caso.sancion || null,
+        caso.activo === true,
+        caso.posicion
+    );
+}
+
+function seleccionarCasosDelDia(dia) {
+    const cfg = CASOS_POR_DIA[dia];
+
     if (!cfg) return [];
 
-    // Caso especial: días con delitos fijos.
-    // Día 1 necesita 4 delitos fijos:
-    // Abril, Adam, Allison y Alma.
-    if (Array.isArray(cfg.delitosFijos)) {
-        const extras = escogerVariosSinRepetir(
-            cfg.inocentes || [],
-            Math.max(0, 5 - cfg.delitosFijos.length)
-        );
+    const delitos = escogerDelitosUsandoTodosLosTipos(
+        cfg.delitos,
+        cfg.cantidadDelitos
+    );
 
-        return mezclarArray([
-            ...cfg.delitosFijos,
-            ...extras
-        ]);
-    }
-
-    // Días 4 y 5: 5 delitos.
-    if (cfg.tipo0 && cfg.tipo1 && cfg.tipo2) {
-        const delitoTipo0 = escogerUno(cfg.tipo0);
-        const delitosTipo1 = escogerVariosSinRepetir(cfg.tipo1, 2);
-        const delitosTipo2 = escogerVariosSinRepetir(cfg.tipo2, 2);
-
-        return mezclarArray([
-            delitoTipo0,
-            ...delitosTipo1,
-            ...delitosTipo2
-        ]);
-    }
-
-    // Días 2 y 3: 3 delitos + 2 inocentes.
-    const principal = escogerUno(cfg.principales);
-    const secundarioA = escogerUno(cfg.secundariosA);
-    const secundarioB = escogerUno(cfg.secundariosB);
-    const extras = escogerVariosSinRepetir(cfg.inocentes, 2);
+    const inocentes = escogerVariosSinRepetir(
+        cfg.inocentes.map(caso => ({
+            ...caso,
+            delito: false,
+            sancion: null,
+            activo: false
+        })),
+        cfg.cantidadInocentes
+    );
 
     return mezclarArray([
-        principal,
-        secundarioA,
-        secundarioB,
-        ...extras
+        ...delitos,
+        ...inocentes
     ]);
 }
 
+function sincronizarGlobales() {
+    window.implicadosTotales = implicadosTotales;
+    window.conexionesMaestras = conexionesMaestras;
+    window.desbloqueoPorDia = desbloqueoPorDia;
+    window.VALERIA = VALERIA;
+}
+
+function nombreNodo(nodo) {
+    return nodo ? nodo.nombre : 'VALERIA';
+}
+
+function crearConexion(nodoA, nodoB, relacion, peso, capacidad) {
+    return {
+        from: nombreNodo(nodoA),
+        to: nodoB === VALERIA ? 'Valeria' : nombreNodo(nodoB),
+        relacion,
+        peso,
+        capacidad
+    };
+}
+
+function construirGrafoDinamico() {
+    const culpables = TodosLosPersonajes.filter(pj => pj.delito === true);
+
+    implicadosTotales = culpables;
+
+    const g = culpables;
+
+    conexionesMaestras = [];
+
+    if (g.length >= 4) {
+        conexionesMaestras.push(
+            crearConexion(g[0], g[1], 'nivel 1', 2, 4),
+            crearConexion(g[0], g[2], 'nivel 1', 4, 3),
+            crearConexion(g[1], g[3], 'nivel 2', 3, 4),
+            crearConexion(g[2], g[3], 'nivel 2', 5, 4),
+            crearConexion(g[3], VALERIA, 'impacto final', 6, 5)
+        );
+    }
+
+    if (g.length >= 7) {
+        conexionesMaestras.push(
+            crearConexion(g[1], g[4], 'difusión del rastro', 3, 5),
+            crearConexion(g[2], g[5], 'presión en red', 4, 4),
+            crearConexion(g[4], g[5], 'interacción grupal', 2, 6),
+            crearConexion(g[4], g[6], 'expansión del caso', 5, 4),
+            crearConexion(g[5], VALERIA, 'afectación indirecta', 7, 5),
+            crearConexion(g[6], VALERIA, 'afectación indirecta', 6, 4)
+        );
+    }
+
+    if (g.length >= 10) {
+        conexionesMaestras.push(
+            crearConexion(g[5], g[7], 'nuevo rastro', 4, 4),
+            crearConexion(g[6], g[8], 'contenido reenviado', 5, 5),
+            crearConexion(g[7], g[8], 'evidencia dudosa', 2, 6),
+            crearConexion(g[7], g[9], 'rumor extendido', 6, 3),
+            crearConexion(g[8], VALERIA, 'daño reputacional', 8, 5),
+            crearConexion(g[9], VALERIA, 'daño reputacional', 7, 4)
+        );
+    }
+
+    if (g.length >= 15) {
+        conexionesMaestras.push(
+            crearConexion(g[8], g[10], 'salto a identidad digital', 5, 4),
+            crearConexion(g[9], g[11], 'rastro técnico', 4, 5),
+            crearConexion(g[10], g[11], 'actividad coordinada', 3, 6),
+            crearConexion(g[10], g[12], 'uso de imagen', 6, 4),
+            crearConexion(g[11], g[13], 'acceso y exposición', 5, 5),
+            crearConexion(g[12], g[14], 'datos compartidos', 4, 5),
+            crearConexion(g[13], VALERIA, 'exposición personal', 8, 4),
+            crearConexion(g[14], VALERIA, 'exposición personal', 7, 4)
+        );
+    }
+
+    if (g.length >= 20) {
+        conexionesMaestras.push(
+            crearConexion(g[13], g[15], 'organización del caso', 5, 6),
+            crearConexion(g[14], g[16], 'presión directa', 6, 5),
+            crearConexion(g[15], g[17], 'coordinación', 3, 7),
+            crearConexion(g[15], g[18], 'roles asignados', 4, 6),
+            crearConexion(g[17], g[19], 'presión sostenida', 5, 5),
+            crearConexion(g[18], g[19], 'grupo organizado', 2, 7),
+            crearConexion(g[16], VALERIA, 'presión final', 8, 5),
+            crearConexion(g[19], VALERIA, 'presión final', 7, 6)
+        );
+    }
+
+    construirDesbloqueoDinamico();
+}
+
+function construirDesbloqueoDinamico() {
+    const acumulado = [];
+
+    desbloqueoPorDia = {};
+
+    for (let dia = 1; dia <= 5; dia++) {
+        const culpablesDia = (Dias[dia] || [])
+            .filter(pj => pj.delito === true)
+            .map(pj => pj.nombre);
+
+        acumulado.push(...culpablesDia);
+
+        desbloqueoPorDia[dia] = [...acumulado];
+    }
+}
+
+// =========================================================
+//  DATOS DE VALERIA
+// =========================================================
+export const VALERIA = {
+    id: 'VALERIA',
+    nombre: 'Valeria',
+    esVictima: true,
+    activo: true
+};
+
+// =========================================================
+//  REINICIAR / GENERAR NUEVA PARTIDA
+// =========================================================
+export function resetPersonajesPartida() {
+    seleccionPartidaActual = {};
+
+    Object.keys(arbolDias).forEach(k => delete arbolDias[k]);
+
+    const nombresDisponibles = mezclarArray(NOMBRES_PERSONAJES);
+
+    Dias = {};
+    TodosLosPersonajes = [];
+
+    for (let dia = 1; dia <= 5; dia++) {
+        const casosDia = seleccionarCasosDelDia(dia);
+
+        const personajesDia = casosDia.map(caso => {
+            const nombre = tomarNombre(nombresDisponibles);
+            return crearNodoDesdeCaso(nombre, caso, dia);
+        });
+
+        Dias[dia] = personajesDia;
+        TodosLosPersonajes.push(...personajesDia);
+    }
+
+    construirReferenciasABB();
+    construirGrafoDinamico();
+    sincronizarGlobales();
+}
+
+function construirReferenciasABB() {
+    const culpables = TodosLosPersonajes.filter(pj => pj.delito === true);
+
+    for (let i = 0; i < culpables.length; i++) {
+        culpables[i]._izqReal = null;
+        culpables[i]._derReal = null;
+        culpables[i]._padreReal = null;
+    }
+
+    for (let i = 0; i < culpables.length; i++) {
+        const actual = culpables[i];
+        const izq = culpables[(i * 2) + 1];
+        const der = culpables[(i * 2) + 2];
+
+        if (izq) {
+            actual._izqReal = izq;
+            izq._padreReal = actual;
+        }
+
+        if (der) {
+            actual._derReal = der;
+            der._padreReal = actual;
+        }
+    }
+}
+
+// =========================================================
+//  FUNCIONES USADAS POR LAS ESCENAS
+// =========================================================
 export function vectorDelDia(dia) {
     if (!seleccionPartidaActual[dia]) {
-        seleccionPartidaActual[dia] = generarVectorDia(dia);
+        seleccionPartidaActual[dia] = Dias[dia] || [];
     }
 
     return [...seleccionPartidaActual[dia]];
@@ -431,426 +713,7 @@ export function construirArbolDia(dia, personajesSeleccionados = null) {
     return arbol;
 }
 
-
-// =========================================================
-// GRAFO MAESTRO DEL CASO
-// =========================================================
-export const VALERIA = {
-    id: 'VALERIA',
-    nombre: 'Valeria',
-    esVictima: true,
-    activo: true
-};
-
-
-// =========================================================
-// NODOS IMPLICADOS DEL CASO REAL
-// 20 AGRESORES EN TOTAL
-//
-// Día 1: 4 implicados
-// Día 2: 3 implicados
-// Día 3: 3 implicados
-// Día 4: 5 implicados
-// Día 5: 5 implicados
-//
-// Total: 4 + 3 + 3 + 5 + 5 = 20
-// Total con Valeria: 21 nodos
-// =========================================================
-export const implicadosTotales = [
-    // Día 1
-    Abril,
-    Adam,
-    Allison,
-    Alma,
-
-    // Día 2
-    Camilo,
-    Clara,
-    Cora,
-
-    // Día 3
-    Eva,
-    Fabio,
-    Irene,
-
-    // Día 4
-    Leo,
-    Lina,
-    Lucas,
-    Luis,
-    Luisa,
-
-    // Día 5
-    Ronald,
-    Rosa,
-    Ruben,
-    Sara,
-    Sofia
-];
-
-
-// =========================================================
-// CONEXIONES DEL GRAFO MAESTRO
-// Aristas bilaterales.
-// No se escribe el delito como respuesta.
-// La relación es narrativa: rastro, propagación, presión, etc.
-// =========================================================
-export const conexionesMaestras = [
-
-    // =====================================================
-    // DÍA 1 - BFS / DFS
-    // Conexiones diseñadas para que los recorridos sean distintos
-    // usando el mismo orden de lectura.
-    //
-    // BFS esperado:
-    // Nivel 0: Abril
-    // Nivel 1: Adam, Allison
-    // Nivel 2: Alma, Valeria
-    //
-    // DFS esperado:
-    // Abril → Adam → Alma → Allison → Valeria
-    // =====================================================
-    {
-        from: 'Abril',
-        to: 'Adam',
-        relacion: 'rastro inicial',
-        peso: 2,
-        capacidad: 4
-    },
-    {
-        from: 'Abril',
-        to: 'Allison',
-        relacion: 'rastro alterno',
-        peso: 4,
-        capacidad: 3
-    },
-    {
-        from: 'Adam',
-        to: 'Alma',
-        relacion: 'cadena profunda',
-        peso: 3,
-        capacidad: 4
-    },
-    {
-        from: 'Alma',
-        to: 'Allison',
-        relacion: 'enlace entre rastros',
-        peso: 5,
-        capacidad: 4
-    },
-    {
-        from: 'Allison',
-        to: 'Valeria',
-        relacion: 'impacto observado',
-        peso: 6,
-        capacidad: 5
-    },
-
-    // =====================================================
-    // DÍA 2 - DIJKSTRA
-    // Pesos para ruta de menor riesgo.
-    // =====================================================
-    {
-        from: 'Adam',
-        to: 'Camilo',
-        relacion: 'difusión del rastro',
-        peso: 3,
-        capacidad: 5
-    },
-    {
-        from: 'Allison',
-        to: 'Clara',
-        relacion: 'presión en red',
-        peso: 4,
-        capacidad: 4
-    },
-    {
-        from: 'Camilo',
-        to: 'Clara',
-        relacion: 'interacción grupal',
-        peso: 2,
-        capacidad: 6
-    },
-    {
-        from: 'Camilo',
-        to: 'Cora',
-        relacion: 'expansión del caso',
-        peso: 5,
-        capacidad: 4
-    },
-    {
-        from: 'Clara',
-        to: 'Valeria',
-        relacion: 'afectación indirecta',
-        peso: 7,
-        capacidad: 5
-    },
-    {
-        from: 'Cora',
-        to: 'Valeria',
-        relacion: 'afectación indirecta',
-        peso: 6,
-        capacidad: 4
-    },
-
-    // =====================================================
-    // DÍA 3 - PRIM
-    // Costos para reconstrucción mínima de la red.
-    // =====================================================
-    {
-        from: 'Clara',
-        to: 'Eva',
-        relacion: 'nuevo rastro',
-        peso: 4,
-        capacidad: 4
-    },
-    {
-        from: 'Cora',
-        to: 'Fabio',
-        relacion: 'contenido reenviado',
-        peso: 5,
-        capacidad: 5
-    },
-    {
-        from: 'Eva',
-        to: 'Fabio',
-        relacion: 'evidencia dudosa',
-        peso: 2,
-        capacidad: 6
-    },
-    {
-        from: 'Eva',
-        to: 'Irene',
-        relacion: 'rumor extendido',
-        peso: 6,
-        capacidad: 3
-    },
-    {
-        from: 'Fabio',
-        to: 'Valeria',
-        relacion: 'daño reputacional',
-        peso: 8,
-        capacidad: 5
-    },
-    {
-        from: 'Irene',
-        to: 'Valeria',
-        relacion: 'daño reputacional',
-        peso: 7,
-        capacidad: 4
-    },
-
-    // =====================================================
-    // DÍA 4 - FORD-FULKERSON
-    // Capacidades para flujo máximo.
-    // =====================================================
-    {
-        from: 'Fabio',
-        to: 'Leo',
-        relacion: 'salto a identidad digital',
-        peso: 5,
-        capacidad: 4
-    },
-    {
-        from: 'Irene',
-        to: 'Lina',
-        relacion: 'rastro técnico',
-        peso: 4,
-        capacidad: 5
-    },
-    {
-        from: 'Leo',
-        to: 'Lina',
-        relacion: 'actividad coordinada',
-        peso: 3,
-        capacidad: 6
-    },
-    {
-        from: 'Leo',
-        to: 'Lucas',
-        relacion: 'uso de imagen',
-        peso: 6,
-        capacidad: 4
-    },
-    {
-        from: 'Lina',
-        to: 'Luis',
-        relacion: 'acceso y exposición',
-        peso: 5,
-        capacidad: 5
-    },
-    {
-        from: 'Lucas',
-        to: 'Luisa',
-        relacion: 'datos compartidos',
-        peso: 4,
-        capacidad: 5
-    },
-    {
-        from: 'Luis',
-        to: 'Valeria',
-        relacion: 'exposición personal',
-        peso: 8,
-        capacidad: 4
-    },
-    {
-        from: 'Luisa',
-        to: 'Valeria',
-        relacion: 'exposición personal',
-        peso: 7,
-        capacidad: 4
-    },
-
-    // =====================================================
-    // DÍA 5 - MASTER
-    // Integración final de todos los algoritmos.
-    // =====================================================
-    {
-        from: 'Luis',
-        to: 'Ronald',
-        relacion: 'organización del caso',
-        peso: 5,
-        capacidad: 6
-    },
-    {
-        from: 'Luisa',
-        to: 'Rosa',
-        relacion: 'presión directa',
-        peso: 6,
-        capacidad: 5
-    },
-    {
-        from: 'Ronald',
-        to: 'Ruben',
-        relacion: 'coordinación',
-        peso: 3,
-        capacidad: 7
-    },
-    {
-        from: 'Ronald',
-        to: 'Sara',
-        relacion: 'roles asignados',
-        peso: 4,
-        capacidad: 6
-    },
-    {
-        from: 'Ruben',
-        to: 'Sofia',
-        relacion: 'presión sostenida',
-        peso: 5,
-        capacidad: 5
-    },
-    {
-        from: 'Sara',
-        to: 'Sofia',
-        relacion: 'grupo organizado',
-        peso: 2,
-        capacidad: 7
-    },
-    {
-        from: 'Rosa',
-        to: 'Valeria',
-        relacion: 'presión final',
-        peso: 8,
-        capacidad: 5
-    },
-    {
-        from: 'Sofia',
-        to: 'Valeria',
-        relacion: 'presión final',
-        peso: 7,
-        capacidad: 6
-    }
-];
-
-
-// =========================================================
-// REVELADO PROGRESIVO ACUMULATIVO
-// =========================================================
-export const desbloqueoPorDia = {
-    1: [
-        'Abril',
-        'Adam',
-        'Allison',
-        'Alma'
-    ],
-
-    2: [
-        'Abril',
-        'Adam',
-        'Allison',
-        'Alma',
-
-        'Camilo',
-        'Clara',
-        'Cora'
-    ],
-
-    3: [
-        'Abril',
-        'Adam',
-        'Allison',
-        'Alma',
-
-        'Camilo',
-        'Clara',
-        'Cora',
-
-        'Eva',
-        'Fabio',
-        'Irene'
-    ],
-
-    4: [
-        'Abril',
-        'Adam',
-        'Allison',
-        'Alma',
-
-        'Camilo',
-        'Clara',
-        'Cora',
-
-        'Eva',
-        'Fabio',
-        'Irene',
-
-        'Leo',
-        'Lina',
-        'Lucas',
-        'Luis',
-        'Luisa'
-    ],
-
-    5: [
-        'Abril',
-        'Adam',
-        'Allison',
-        'Alma',
-
-        'Camilo',
-        'Clara',
-        'Cora',
-
-        'Eva',
-        'Fabio',
-        'Irene',
-
-        'Leo',
-        'Lina',
-        'Lucas',
-        'Luis',
-        'Luisa',
-
-        'Ronald',
-        'Rosa',
-        'Ruben',
-        'Sara',
-        'Sofia'
-    ]
-};
-
-window.implicadosTotales = implicadosTotales;
-window.conexionesMaestras = conexionesMaestras;
-window.desbloqueoPorDia = desbloqueoPorDia;
-window.VALERIA = VALERIA;
+// Genera una partida inicial cuando se importa el archivo.
+// Luego ModoJuego vuelve a llamar resetPersonajesPartida()
+// cada vez que empieza una partida nueva.
+resetPersonajesPartida();

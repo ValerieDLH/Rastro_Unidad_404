@@ -12,6 +12,16 @@ export class EscenaHistoria extends Phaser.Scene {
             : 0.5;
 
         this.volumenActual = this._obtenerVolumenGlobal(volumenInicial);
+
+        // RK Game: eje donde reporta las flechitas.
+        this.RK_AXIS_FLECHAS = 9;
+
+        // Rangos ya ajustados según tu prueba en Start.
+        this.RK_HAT_IZQUIERDA_MIN = 0.65;
+        this.RK_HAT_IZQUIERDA_MAX = 0.85;
+
+        this.RK_HAT_DERECHA_MIN = -0.50;
+        this.RK_HAT_DERECHA_MAX = -0.35;
     }
 
     preload() {
@@ -297,32 +307,37 @@ export class EscenaHistoria extends Phaser.Scene {
         }
     }
 
-    iniciarRKHistoria() {
-        this.rkHistoriaAnterior = {
-            l1: false,
-            r1: false
-        };
+    // ─────────────────────────────────────────────────────────
+    // CONTROLES RK GAME / PLAYSTATION
+    // ─────────────────────────────────────────────────────────
 
-        if (this.input.gamepad) {
-            this.input.gamepad.on('connected', (pad) => {
-                console.log('RK/Gamepad conectado en EscenaHistoria:', pad.index, pad.id);
-            });
+    iniciarRKHistoria() {
+        this.rkHistoriaAnteriorPorPad = {};
+        this.rkHistoriaCooldownVolumen = 0;
+
+        try {
+            if (this.input && this.input.gamepad) {
+                if (typeof this.input.gamepad.start === 'function') {
+                    this.input.gamepad.start();
+                }
+
+                if (typeof this.input.gamepad.startListeners === 'function') {
+                    this.input.gamepad.startListeners();
+                }
+            }
+        } catch (error) {
+            console.warn('No se pudo iniciar gamepads en EscenaHistoria:', error);
         }
     }
 
     actualizarRKHistoria() {
         if (this.yaTransicionando) return;
 
-        const pad = this.obtenerPadRKHistoria();
-        if (!pad) return;
+        const entrada = this.leerInputTodosLosMandosHistoria();
+        const estado = entrada.estado;
+        const justDown = entrada.justDown;
 
-        const l1Presionado = this.botonRKHistoria(pad, 6);
-        const r1Presionado = this.botonRKHistoria(pad, 7);
-
-        const l1JustDown = l1Presionado && !this.rkHistoriaAnterior.l1;
-        const r1JustDown = r1Presionado && !this.rkHistoriaAnterior.r1;
-
-        if (l1JustDown) {
+        if (justDown.l1) {
             this.reproducirClick();
 
             if (this.backBtn) {
@@ -330,9 +345,10 @@ export class EscenaHistoria extends Phaser.Scene {
             }
 
             this.irAStart();
+            return;
         }
 
-        if (r1JustDown) {
+        if (justDown.r1) {
             this.reproducirClick();
 
             if (this.skipBtn) {
@@ -340,33 +356,242 @@ export class EscenaHistoria extends Phaser.Scene {
             }
 
             this.irAInstrucciones();
+            return;
         }
 
-        this.rkHistoriaAnterior.l1 = l1Presionado;
-        this.rkHistoriaAnterior.r1 = r1Presionado;
+        const ahora = performance.now();
+
+        if (ahora > this.rkHistoriaCooldownVolumen) {
+            if (estado.izquierda) {
+                this.cambiarVolumenHistoria(-0.05);
+                this.rkHistoriaCooldownVolumen = ahora + 180;
+            } else if (estado.derecha) {
+                this.cambiarVolumenHistoria(0.05);
+                this.rkHistoriaCooldownVolumen = ahora + 180;
+            }
+        }
     }
 
-    obtenerPadRKHistoria() {
-        if (!this.input.gamepad) return null;
+    obtenerMandosHistoria() {
+        let pads = [];
 
-        if (typeof this.input.gamepad.getPad === 'function') {
-            return this.input.gamepad.getPad(0);
+        if (navigator.getGamepads) {
+            pads = Array.from(navigator.getGamepads())
+                .filter(pad => pad !== null && pad !== undefined);
         }
 
-        if (this.input.gamepad.gamepads) {
-            return this.input.gamepad.gamepads[0] || null;
+        if (pads.length === 0 && this.input && this.input.gamepad) {
+            const manager = this.input.gamepad;
+
+            if (typeof manager.getAll === 'function') {
+                pads = manager.getAll();
+            } else if (Array.isArray(manager.gamepads)) {
+                pads = manager.gamepads;
+            } else {
+                if (manager.pad1) pads.push(manager.pad1);
+                if (manager.pad2) pads.push(manager.pad2);
+                if (manager.pad3) pads.push(manager.pad3);
+                if (manager.pad4) pads.push(manager.pad4);
+            }
         }
 
-        return null;
+        return pads.filter(pad => pad !== null && pad !== undefined);
     }
 
-    botonRKHistoria(pad, index) {
-        if (!pad || !pad.buttons || !pad.buttons[index]) return false;
+    _crearEstadoVacioHistoria() {
+        return {
+            l1: false,
+            r1: false,
+            izquierda: false,
+            derecha: false
+        };
+    }
 
-        const boton = pad.buttons[index];
-        const valor = typeof boton.value === 'number' ? boton.value : 0;
+    _obtenerIdPadHistoria(pad, fallbackIndex) {
+        if (!pad) return `pad_${fallbackIndex}`;
 
-        return boton.pressed === true || valor > 0.35;
+        if (typeof pad.index === 'number') {
+            return `slot_${pad.index}`;
+        }
+
+        if (pad.id) {
+            return `pad_${pad.id}`;
+        }
+
+        return `pad_${fallbackIndex}`;
+    }
+
+    leerInputTodosLosMandosHistoria() {
+        const pads = this.obtenerMandosHistoria();
+
+        const estadoFinal = this._crearEstadoVacioHistoria();
+        const justDownFinal = this._crearEstadoVacioHistoria();
+
+        if (!this.rkHistoriaAnteriorPorPad) {
+            this.rkHistoriaAnteriorPorPad = {};
+        }
+
+        pads.forEach((pad, fallbackIndex) => {
+            const idPad = this._obtenerIdPadHistoria(pad, fallbackIndex);
+            const estadoActual = this.leerEstadoHistoria(pad);
+            const estadoAnterior =
+                this.rkHistoriaAnteriorPorPad[idPad] ||
+                this._crearEstadoVacioHistoria();
+
+            Object.keys(estadoFinal).forEach(key => {
+                estadoFinal[key] =
+                    estadoFinal[key] ||
+                    estadoActual[key];
+
+                justDownFinal[key] =
+                    justDownFinal[key] ||
+                    (estadoActual[key] && !estadoAnterior[key]);
+            });
+
+            this.rkHistoriaAnteriorPorPad[idPad] = { ...estadoActual };
+        });
+
+        return {
+            estado: estadoFinal,
+            justDown: justDownFinal,
+            cantidadMandos: pads.length,
+            mandos: pads
+        };
+    }
+
+    _esMandoPlayHistoria(pad) {
+        if (!pad) return false;
+
+        const id = (pad.id || pad.idName || '').toLowerCase();
+
+        return (
+            id.includes('wireless controller') ||
+            id.includes('dualshock') ||
+            id.includes('dualsense') ||
+            id.includes('playstation') ||
+            id.includes('ps4') ||
+            id.includes('ps5')
+        );
+    }
+
+    leerEstadoHistoria(pad) {
+        const esPlay = this._esMandoPlayHistoria(pad);
+        const ejeFlechasRK = this.leerEjeHistoria(pad, this.RK_AXIS_FLECHAS);
+
+        // PlayStation:
+        // L1 = 4
+        // R1 = 5
+        // Cruceta izquierda = 14
+        // Cruceta derecha = 15
+        const playL1 = this.botonHistoria(pad, 4);
+        const playR1 = this.botonHistoria(pad, 5);
+        const playIzquierda = this.botonHistoria(pad, 14);
+        const playDerecha = this.botonHistoria(pad, 15);
+
+        // RK Game:
+        // Back = L1
+        // Skip = R1
+        // Flechitas por axis 9.
+        const rkL1 = this.botonHistoria(pad, 6);
+        const rkR1 =
+            this.botonHistoria(pad, 5) ||
+            this.botonHistoria(pad, 7);
+
+        const rkIzquierdaHat =
+            ejeFlechasRK >= this.RK_HAT_IZQUIERDA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_IZQUIERDA_MAX;
+
+        const rkDerechaHat =
+            ejeFlechasRK >= this.RK_HAT_DERECHA_MIN &&
+            ejeFlechasRK <= this.RK_HAT_DERECHA_MAX;
+
+        const rkIzquierda =
+            rkIzquierdaHat ||
+            this.botonHistoria(pad, 14) ||
+            this.botonHistoria(pad, 16) ||
+            this.botonHistoria(pad, 18);
+
+        const rkDerecha =
+            rkDerechaHat ||
+            this.botonHistoria(pad, 15) ||
+            this.botonHistoria(pad, 17) ||
+            this.botonHistoria(pad, 19);
+
+        return {
+            l1: esPlay ? playL1 : rkL1,
+            r1: esPlay ? playR1 : rkR1,
+            izquierda: esPlay ? playIzquierda : rkIzquierda,
+            derecha: esPlay ? playDerecha : rkDerecha
+        };
+    }
+
+    leerEjeHistoria(pad, index) {
+        if (!pad) return 0;
+
+        let valor = 0;
+
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                valor = eje.getValue();
+            } else if (typeof eje === 'number') {
+                valor = eje;
+            } else if (typeof eje.value === 'number') {
+                valor = eje.value;
+            }
+        } else if (index === 0 && pad.leftStick) {
+            valor = pad.leftStick.x || 0;
+        } else if (index === 1 && pad.leftStick) {
+            valor = pad.leftStick.y || 0;
+        }
+
+        return valor;
+    }
+
+    botonHistoria(pad, index) {
+        if (!pad) return false;
+
+        if (pad.buttons && pad.buttons[index] != null) {
+            const boton = pad.buttons[index];
+
+            if (typeof boton.pressed === 'boolean') {
+                return boton.pressed;
+            }
+
+            if (typeof boton.value === 'number') {
+                return boton.value > 0.35;
+            }
+
+            if (typeof boton.getValue === 'function') {
+                return boton.getValue() > 0.35;
+            }
+        }
+
+        if (index === 4 && pad.L1) return pad.L1.pressed || false;
+        if (index === 5 && pad.R1) return pad.R1.pressed || false;
+        if (index === 6 && pad.L2) return pad.L2.pressed || false;
+        if (index === 7 && pad.R2) return pad.R2.pressed || false;
+
+        return false;
+    }
+
+    cambiarVolumenHistoria(cambio) {
+        const nuevoVolumen = Phaser.Math.Clamp(this.volumenActual + cambio, 0, 1);
+
+        this._guardarVolumenGlobal(nuevoVolumen);
+
+        if (this.sonidoContexto) {
+            this.tweens.killTweensOf(this.sonidoContexto);
+            this.sonidoContexto.setVolume(this.volumenActual);
+        }
+
+        if (this.sonidoEscribir) {
+            this.tweens.killTweensOf(this.sonidoEscribir);
+            this.sonidoEscribir.setVolume(this.volumenActual);
+        }
+
+        this.actualizarUIVolumen();
     }
 
     mostrarSecuencia() {
@@ -436,6 +661,7 @@ export class EscenaHistoria extends Phaser.Scene {
             });
         });
     }
+
     crearControlVolumen() {
         this.volumenActual = this._obtenerVolumenGlobal(this.volumenActual);
 

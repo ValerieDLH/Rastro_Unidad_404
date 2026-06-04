@@ -13,6 +13,7 @@ import { GameOver } from './Scenes/GameOver.js';
 import { MemoriaPistas } from './Scenes/MemoriaPistas.js';
 import { LaberintoDigital } from './Scenes/LaberintoDigital.js';
 import { GrafoDia } from './Scenes/GrafoDia.js';
+import { RankingFinal } from './Scenes/RankingFinal.js';
 
 const config = {
     type: Phaser.AUTO,
@@ -38,7 +39,6 @@ const config = {
     },
 
     scene: [
-        
         Start,
         Instrucciones,
         ModoJuego,
@@ -53,6 +53,7 @@ const config = {
 
         PuntajeDia,
         GrafoDia,
+        RankingFinal,
         GameOver
     ]
 };

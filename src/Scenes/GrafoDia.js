@@ -54,6 +54,7 @@ export class GrafoDia extends Phaser.Scene {
         this.estadoBotonesGamepad = {};
         this.modalAbierto = false;
         this.opcionesAntesModal = [];
+        this.estadosGamepadPorPad = {};
 
     }
 
@@ -82,10 +83,10 @@ export class GrafoDia extends Phaser.Scene {
             this.load.audio('click', 'music/click.mp3');
         }
 
-        if (!this.cache.audio.exists('musicaGrafo')){
-            this.load.audio('musicaGrafo', 'music/b5.mp3' )
+        if (!this.cache.audio.exists('musicaGrafo')) {
+            this.load.audio('musicaGrafo', 'music/b5.mp3')
         }
-        
+
     }
 
     create() {
@@ -94,7 +95,7 @@ export class GrafoDia extends Phaser.Scene {
         this.cameras.main.fadeIn(350, 0, 0, 0);
 
         this.musicaGrafo = this.sound.add('musicaGrafo', {
-            volume: 0, 
+            volume: 0,
             loop: true
         });
         this.musicaGrafo.play();
@@ -124,7 +125,6 @@ export class GrafoDia extends Phaser.Scene {
         this.ejecutarAlgoritmoDelDia();
 
     }
-
     update() {
         this.actualizarControlesRK();
     }
@@ -422,10 +422,10 @@ export class GrafoDia extends Phaser.Scene {
         }
 
         this.areaGrafo = {
-            left: 45,
-            right: 1160,
-            top: 108,
-            bottom: 505
+            left: 50,
+            right: 1170,
+            top: 125,
+            bottom: 485
         };
 
         this.panelGrafo =
@@ -716,7 +716,6 @@ export class GrafoDia extends Phaser.Scene {
     // =========================================================
 
     configurarControles() {
-
         this.teclas =
             this.input.keyboard.addKeys({
                 ENTER: Phaser.Input.Keyboard.KeyCodes.ENTER,
@@ -728,15 +727,15 @@ export class GrafoDia extends Phaser.Scene {
                 R: Phaser.Input.Keyboard.KeyCodes.R,
                 X: Phaser.Input.Keyboard.KeyCodes.X,
                 B: Phaser.Input.Keyboard.KeyCodes.B,
+                Y: Phaser.Input.Keyboard.KeyCodes.Y,
                 ESC: Phaser.Input.Keyboard.KeyCodes.ESC
             });
 
         this.estadoBotonesGamepad = {};
+        this.estadosGamepadPorPad = {};
 
         try {
-
             if (this.input && this.input.gamepad) {
-
                 if (typeof this.input.gamepad.start === 'function') {
                     this.input.gamepad.start();
                 }
@@ -744,66 +743,74 @@ export class GrafoDia extends Phaser.Scene {
                 if (typeof this.input.gamepad.startListeners === 'function') {
                     this.input.gamepad.startListeners();
                 }
-
             }
-
         } catch (error) {
-            console.warn('RK Game no disponible:', error);
+            console.warn('Gamepad no disponible en GrafoDia:', error);
         }
-
     }
 
     actualizarControlesRK() {
-
         if (!this.teclas) return;
+
+        const inputMandos = this.leerInputTodosLosMandosGrafo();
+        const estado = inputMandos.estado;
+        const justDown = inputMandos.justDown;
 
         const izquierda =
             Phaser.Input.Keyboard.JustDown(this.teclas.LEFT)
             ||
             Phaser.Input.Keyboard.JustDown(this.teclas.A)
             ||
-            this._botonGamepadJustPressed('LEFT');
+            justDown.izquierda;
 
         const derecha =
             Phaser.Input.Keyboard.JustDown(this.teclas.RIGHT)
             ||
             Phaser.Input.Keyboard.JustDown(this.teclas.D)
             ||
-            this._botonGamepadJustPressed('RIGHT');
+            justDown.derecha;
 
         const aceptar =
             Phaser.Input.Keyboard.JustDown(this.teclas.ENTER)
             ||
             Phaser.Input.Keyboard.JustDown(this.teclas.SPACE)
             ||
-            this._botonGamepadJustPressed('A');
+            justDown.a;
 
         const cerrar =
-            Phaser.Input.Keyboard.JustDown(this.teclas.ESC);
+            Phaser.Input.Keyboard.JustDown(this.teclas.ESC)
+            ||
+            justDown.b;
 
         const presionarX =
             Phaser.Input.Keyboard.JustDown(this.teclas.X)
             ||
-            this._botonGamepadJustPressed('X');
+            justDown.x;
 
         const presionarB =
             Phaser.Input.Keyboard.JustDown(this.teclas.B)
             ||
-            this._botonGamepadJustPressed('B');
+            justDown.b;
+
+        const presionarY =
+            Phaser.Input.Keyboard.JustDown(this.teclas.Y)
+            ||
+            justDown.y;
 
         const continuarR1 =
             Phaser.Input.Keyboard.JustDown(this.teclas.R)
             ||
-            this._botonGamepadJustPressed('R1');
+            justDown.r1;
+
+        const volverL1 =
+            justDown.l1;
 
         if (this.modalAbierto) {
-
-            if (cerrar || aceptar || presionarB) {
+            if (cerrar || aceptar || presionarB || volverL1) {
                 this._activarSeleccionUI();
             }
 
             return;
-
         }
 
         if (continuarR1 && this.yaPuedeContinuar) {
@@ -816,7 +823,6 @@ export class GrafoDia extends Phaser.Scene {
             &&
             !this.recorridoEnCurso
         ) {
-
             if (
                 presionarX
                 &&
@@ -848,7 +854,31 @@ export class GrafoDia extends Phaser.Scene {
                 this.botonesRecorrido[1].accion();
                 return;
             }
+        }
 
+        /*
+            En día 5:
+            Y también puede abrir conclusiones si el botón existe.
+        */
+        if (
+            presionarY &&
+            this.algoritmo === 'MASTER' &&
+            this.opcionesUI &&
+            this.opcionesUI.length > 1
+        ) {
+            const botonConclusiones = this.opcionesUI.find(op => {
+                return op && op.label && op.label.text === 'CONCLUSIONES';
+            });
+
+            if (
+                botonConclusiones &&
+                typeof botonConclusiones.accion === 'function' &&
+                botonConclusiones.habilitado()
+            ) {
+                this.reproducirClickSeguro();
+                botonConclusiones.accion();
+                return;
+            }
         }
 
         if (izquierda) {
@@ -862,7 +892,6 @@ export class GrafoDia extends Phaser.Scene {
         if (aceptar) {
             this._activarSeleccionUI();
         }
-
     }
 
     reproducirClickSeguro() {
@@ -875,85 +904,248 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
-    _botonGamepadJustPressed(nombre) {
+    obtenerMandosGrafo() {
+        let pads = [];
 
-        const mapa = {
-            A: [0],
-            B: [1],
-            X: [2, 3],
-            Y: [3],
-            L1: [4, 6],
-            R1: [5, 7],
-            SELECT: [8],
-            START: [9],
-            UP: [12],
-            DOWN: [13],
-            LEFT: [14],
-            RIGHT: [15]
+        if (navigator.getGamepads) {
+            pads = Array.from(navigator.getGamepads())
+                .filter(pad => pad !== null && pad !== undefined);
+        }
+
+        if (pads.length === 0 && this.input && this.input.gamepad) {
+            const manager = this.input.gamepad;
+
+            if (typeof manager.getAll === 'function') {
+                pads = manager.getAll();
+            } else if (Array.isArray(manager.gamepads)) {
+                pads = manager.gamepads;
+            } else {
+                if (manager.pad1) pads.push(manager.pad1);
+                if (manager.pad2) pads.push(manager.pad2);
+                if (manager.pad3) pads.push(manager.pad3);
+                if (manager.pad4) pads.push(manager.pad4);
+            }
+        }
+
+        return pads.filter(pad => pad !== null && pad !== undefined);
+    }
+
+    _obtenerIdPadGrafo(pad, index) {
+        if (!pad) return `pad_${index}`;
+
+        const slot =
+            typeof pad.index === 'number'
+                ? pad.index
+                : index;
+
+        return `slot_${slot}`;
+    }
+
+    _crearEstadoVacioGrafo() {
+        return {
+            l1: false,
+            r1: false,
+            a: false,
+            b: false,
+            x: false,
+            y: false,
+            arriba: false,
+            abajo: false,
+            izquierda: false,
+            derecha: false
         };
+    }
 
-        const indices =
-            mapa[nombre];
+    leerInputTodosLosMandosGrafo() {
+        const pads = this.obtenerMandosGrafo();
 
-        if (!indices) return false;
+        const estadoFinal = this._crearEstadoVacioGrafo();
+        const justDownFinal = this._crearEstadoVacioGrafo();
 
-        const gamepadPlugin =
-            this.input && this.input.gamepad
-                ? this.input.gamepad
-                : null;
-
-        if (!gamepadPlugin) {
-            this.estadoBotonesGamepad[nombre] = false;
-            return false;
+        if (!this.estadosGamepadPorPad) {
+            this.estadosGamepadPorPad = {};
         }
 
-        let pad = null;
+        pads.forEach((pad, index) => {
+            const idPad = this._obtenerIdPadGrafo(pad, index);
+            const estadoActual = this.leerEstadoMandoGrafo(pad);
 
-        if (typeof gamepadPlugin.getPad === 'function') {
-            pad = gamepadPlugin.getPad(0);
-        }
+            const estadoAnterior =
+                this.estadosGamepadPorPad[idPad] ||
+                this._crearEstadoVacioGrafo();
 
-        else if (
-            gamepadPlugin.gamepads
-            &&
-            gamepadPlugin.gamepads.length > 0
-        ) {
-            pad = gamepadPlugin.gamepads[0];
-        }
+            Object.keys(estadoFinal).forEach(key => {
+                estadoFinal[key] =
+                    estadoFinal[key] ||
+                    estadoActual[key];
 
-        else if (typeof gamepadPlugin.getAll === 'function') {
-            const pads = gamepadPlugin.getAll();
-            pad = pads && pads.length > 0 ? pads[0] : null;
-        }
-
-        if (!pad || !pad.buttons) {
-            this.estadoBotonesGamepad[nombre] = false;
-            return false;
-        }
-
-        const presionado =
-            indices.some(index => {
-
-                const boton =
-                    pad.buttons[index];
-
-                if (!boton) return false;
-
-                return (
-                    boton.pressed === true
-                    ||
-                    boton.value > 0.35
-                );
-
+                justDownFinal[key] =
+                    justDownFinal[key] ||
+                    (estadoActual[key] && !estadoAnterior[key]);
             });
 
-        const antes =
-            this.estadoBotonesGamepad[nombre] || false;
+            this.estadosGamepadPorPad[idPad] = { ...estadoActual };
+        });
 
-        this.estadoBotonesGamepad[nombre] = presionado;
+        return {
+            estado: estadoFinal,
+            justDown: justDownFinal,
+            cantidadMandos: pads.length,
+            mandos: pads
+        };
+    }
 
-        return presionado && !antes;
+    leerEstadoMandoGrafo(pad) {
+        const ejeX = this.leerEjeGrafo(pad, 0);
+        const ejeY = this.leerEjeGrafo(pad, 1);
 
+        const esPlay = this._esMandoPlayGrafo(pad);
+
+        if (esPlay) {
+            return {
+                /*
+                    PlayStation:
+                    X/Cruz = A = 0
+                    Círculo = B = 1
+                    Cuadrado = X = 2
+                    Triángulo = Y = 3
+                    L1 = 4
+                    R1 = 5
+                */
+
+                l1: this.botonGrafo(pad, 4),
+                r1: this.botonGrafo(pad, 5),
+
+                a: this.botonGrafo(pad, 0),
+                b: this.botonGrafo(pad, 1),
+                x: this.botonGrafo(pad, 2),
+                y: this.botonGrafo(pad, 3),
+
+                izquierda:
+                    ejeX < -0.45 ||
+                    this.botonGrafo(pad, 14),
+
+                derecha:
+                    ejeX > 0.45 ||
+                    this.botonGrafo(pad, 15),
+
+                arriba:
+                    ejeY < -0.45 ||
+                    this.botonGrafo(pad, 12),
+
+                abajo:
+                    ejeY > 0.45 ||
+                    this.botonGrafo(pad, 13)
+            };
+        }
+
+        return {
+            /*
+                RK Game:
+                A = seleccionar
+                B = segundo botón / cerrar modal
+                X = primer botón
+                Y = conclusiones
+                L1 = volver/cerrar
+                R1 = continuar
+            */
+
+            l1:
+                this.botonGrafo(pad, 6),
+
+            r1:
+                this.botonGrafo(pad, 5) ||
+                this.botonGrafo(pad, 7),
+
+            a: this.botonGrafo(pad, 0),
+
+            b: this.botonGrafo(pad, 1),
+
+            x:
+                this.botonGrafo(pad, 2) ||
+                this.botonGrafo(pad, 3),
+
+            y: this.botonGrafo(pad, 4),
+
+            izquierda:
+                ejeX < -0.45 ||
+                this.botonGrafo(pad, 14),
+
+            derecha:
+                ejeX > 0.45 ||
+                this.botonGrafo(pad, 15),
+
+            arriba:
+                ejeY < -0.45 ||
+                this.botonGrafo(pad, 12),
+
+            abajo:
+                ejeY > 0.45 ||
+                this.botonGrafo(pad, 13)
+        };
+    }
+
+    _esMandoPlayGrafo(pad) {
+        if (!pad) return false;
+
+        const id = (pad.id || pad.idName || '').toLowerCase();
+
+        return (
+            id.includes('wireless controller') ||
+            id.includes('dualshock') ||
+            id.includes('dualsense') ||
+            id.includes('playstation') ||
+            id.includes('ps4') ||
+            id.includes('ps5')
+        );
+    }
+
+    leerEjeGrafo(pad, index) {
+        if (!pad) return 0;
+
+        let valor = 0;
+
+        if (pad.axes && index >= 0 && index < pad.axes.length && pad.axes[index] != null) {
+            const eje = pad.axes[index];
+
+            if (typeof eje.getValue === 'function') {
+                valor = eje.getValue();
+            } else if (typeof eje.value === 'number') {
+                valor = eje.value;
+            } else if (typeof eje === 'number') {
+                valor = eje;
+            }
+        } else if (index === 0 && pad.leftStick) {
+            valor = pad.leftStick.x || 0;
+        } else if (index === 1 && pad.leftStick) {
+            valor = pad.leftStick.y || 0;
+        }
+
+        return Math.abs(valor) < 0.25 ? 0 : valor;
+    }
+
+    botonGrafo(pad, index) {
+        if (!pad || !pad.buttons || index < 0 || index >= pad.buttons.length) {
+            return false;
+        }
+
+        const boton = pad.buttons[index];
+
+        if (!boton) return false;
+
+        if (typeof boton.pressed === 'boolean') {
+            return boton.pressed;
+        }
+
+        if (typeof boton.value === 'number') {
+            return boton.value > 0.35;
+        }
+
+        if (typeof boton.getValue === 'function') {
+            return boton.getValue() > 0.35;
+        }
+
+        return false;
     }
 
     _registrarOpcionUI(btn, label, zone, accion, habilitado = null) {
@@ -1125,14 +1317,124 @@ export class GrafoDia extends Phaser.Scene {
         this._actualizarGrados();
 
     }
-
     _posicionarNodos() {
+        const origen = this.obtenerNodoOrigen();
+        const destino = this.obtenerNodoDestino();
 
-        const origen =
-            this.obtenerNodoOrigen();
+        if (this.diaActual === 1) {
+            const culpables = this.nodos.filter(nodo => !nodo.esVictima);
 
-        const destino =
-            this.obtenerNodoDestino();
+            const n0 = culpables[0];
+            const n1 = culpables[1];
+            const n2 = culpables[2];
+            const n3 = culpables[3];
+
+            if (n0) {
+                n0.x = 170;
+                n0.y = 310;
+            }
+
+            if (n1) {
+                n1.x = 420;
+                n1.y = 210;
+            }
+
+            if (n2) {
+                n2.x = 420;
+                n2.y = 410;
+            }
+
+            if (n3) {
+                n3.x = 710;
+                n3.y = 310;
+            }
+
+            if (destino) {
+                destino.x = 1040;
+                destino.y = 310;
+            }
+
+            return;
+        }
+
+        /*
+            DÍA 4 Y DÍA 5:
+            Se usa distribución por capas.
+            No depende de nombres fijos, por eso funciona aunque cambien los personajes.
+        */
+        if (
+            this.diaActual === 4 ||
+            this.diaActual === 5 ||
+            this.algoritmo === 'FORD' ||
+            this.algoritmo === 'MASTER'
+        ) {
+            const area = this.areaGrafo || {
+                left: 55,
+                right: 1165,
+                top: 125,
+                bottom: 485
+            };
+
+            if (origen) {
+                origen.x = area.left + 70;
+                origen.y = (area.top + area.bottom) / 2;
+            }
+
+            if (destino) {
+                destino.x = area.right - 70;
+                destino.y = (area.top + area.bottom) / 2;
+            }
+
+            const intermedios = this.nodos.filter(nodo => {
+                return nodo !== origen && nodo !== destino && !nodo.esVictima;
+            });
+
+            /*
+                En Día 4 usamos menos columnas para que se vea como flujo.
+                En Día 5 usamos más columnas para repartir mejor los 20+ nodos.
+            */
+            const columnas =
+                this.diaActual === 4 || this.algoritmo === 'FORD'
+                    ? 4
+                    : 5;
+
+            const filas = Math.ceil(intermedios.length / columnas);
+
+            const xInicial = area.left + 250;
+            const xFinal = area.right - 250;
+
+            const yInicial = area.top + 60;
+            const yFinal = area.bottom - 65;
+
+            intermedios.forEach((nodo, index) => {
+                const col = index % columnas;
+                const fila = Math.floor(index / columnas);
+
+                const x =
+                    columnas === 1
+                        ? (area.left + area.right) / 2
+                        : Phaser.Math.Linear(xInicial, xFinal, col / (columnas - 1));
+
+                const y =
+                    filas === 1
+                        ? (area.top + area.bottom) / 2
+                        : Phaser.Math.Linear(yInicial, yFinal, fila / (filas - 1));
+
+                /*
+                    Pequeño desplazamiento alternado para que no queden
+                    todas las líneas exactamente encima.
+                */
+                const offsetY =
+                    col % 2 === 0
+                        ? -10
+                        : 10;
+
+                nodo.x = Phaser.Math.Clamp(x, area.left + 80, area.right - 80);
+                nodo.y = Phaser.Math.Clamp(y + offsetY, area.top + 45, area.bottom - 55);
+            });
+
+            return;
+        }
 
         if (origen) {
             origen.x = 115;
@@ -1144,48 +1446,99 @@ export class GrafoDia extends Phaser.Scene {
             destino.y = 300;
         }
 
-        const posicionesPorNombre = {
-
-            Adam: { x: 285, y: 165 },
-            Alma: { x: 455, y: 238 },
-            Allison: { x: 625, y: 385 },
-
-            Camilo: { x: 440, y: 130 },
-            Clara: { x: 440, y: 360 },
-            Cora: { x: 600, y: 145 },
-
-            Eva: { x: 625, y: 270 },
-            Fabio: { x: 625, y: 425 },
-            Irene: { x: 760, y: 130 },
-
-            Leo: { x: 790, y: 225 },
-            Lina: { x: 805, y: 320 },
-            Lucas: { x: 795, y: 410 },
-            Luis: { x: 900, y: 235 },
-            Luisa: { x: 900, y: 410 },
-
-            Ronald: { x: 900, y: 135 },
-            Sofia: { x: 995, y: 190 },
-            Rosa: { x: 955, y: 295 },
-            Ruben: { x: 995, y: 365 },
-            Sara: { x: 930, y: 430 }
-
-        };
-
-        this.nodos.forEach(nodo => {
-
-            if (nodo.esOrigen || nodo.esVictima) return;
-
-            const pos =
-                posicionesPorNombre[nodo.nombre];
-
-            if (pos) {
-                nodo.x = pos.x;
-                nodo.y = pos.y;
-            }
-
+        const nodosIntermedios = this.nodos.filter(nodo => {
+            return !nodo.esOrigen && !nodo.esVictima;
         });
 
+        const total = nodosIntermedios.length;
+
+        if (total === 0) return;
+
+        if (total <= 3) {
+            const posiciones = [
+                { x: 390, y: 190 },
+                { x: 640, y: 310 },
+                { x: 890, y: 430 }
+            ];
+
+            nodosIntermedios.forEach((nodo, index) => {
+                const pos = posiciones[index] || posiciones[posiciones.length - 1];
+                nodo.x = pos.x;
+                nodo.y = pos.y;
+            });
+
+            return;
+        }
+
+        if (total <= 6) {
+            const posiciones = [
+                { x: 310, y: 170 },
+                { x: 510, y: 250 },
+                { x: 710, y: 170 },
+                { x: 430, y: 410 },
+                { x: 650, y: 390 },
+                { x: 850, y: 300 }
+            ];
+
+            nodosIntermedios.forEach((nodo, index) => {
+                const pos = posiciones[index] || posiciones[index % posiciones.length];
+                nodo.x = pos.x;
+                nodo.y = pos.y;
+            });
+
+            return;
+        }
+
+        const area = this.areaGrafo || {
+            left: 45,
+            right: 1160,
+            top: 108,
+            bottom: 505
+        };
+
+        const columnas = Math.ceil(Math.sqrt(total));
+        const filas = Math.ceil(total / columnas);
+
+        const margenX = 180;
+        const margenY = 70;
+
+        const anchoDisponible = (area.right - area.left) - margenX * 2;
+        const altoDisponible = (area.bottom - area.top) - margenY * 2;
+
+        nodosIntermedios.forEach((nodo, index) => {
+            const col = index % columnas;
+            const fila = Math.floor(index / columnas);
+
+            const x = area.left + margenX + (
+                columnas === 1
+                    ? anchoDisponible / 2
+                    : (anchoDisponible / (columnas - 1)) * col
+            );
+
+            const y = area.top + margenY + (
+                filas === 1
+                    ? altoDisponible / 2
+                    : (altoDisponible / (filas - 1)) * fila
+            );
+
+            nodo.x = x;
+            nodo.y = y;
+        });
+    }
+
+    _acomodarNodosNoMapeados(usados, posicionesExtra) {
+        if (!Array.isArray(posicionesExtra)) return;
+
+        const pendientes = this.nodos.filter(nodo => {
+            return !nodo.esVictima && !usados.has(nodo.id);
+        });
+
+        pendientes.forEach((nodo, index) => {
+            const pos = posicionesExtra[index % posicionesExtra.length];
+
+            nodo.x = pos.x;
+            nodo.y = pos.y;
+        });
     }
 
     _cargarConexionesMaestras() {
@@ -1242,12 +1595,12 @@ export class GrafoDia extends Phaser.Scene {
                 &&
                 a.to === idB
             )
-            ||
-            (
-                a.from === idB
-                &&
-                a.to === idA
-            );
+                ||
+                (
+                    a.from === idB
+                    &&
+                    a.to === idA
+                );
 
         });
 
@@ -1336,14 +1689,64 @@ export class GrafoDia extends Phaser.Scene {
     // =========================================================
 
     dibujarGrafo() {
+        if (this.aristas) {
+            this.aristas.forEach(arista => {
+                if (arista.textoPeso) {
+                    arista.textoPeso.destroy();
+                    arista.textoPeso = null;
+                }
+
+                if (arista.graphics) {
+                    arista.graphics.destroy();
+                    arista.graphics = null;
+                }
+            });
+        }
+
+        if (this.nodosVisuales) {
+            this.nodosVisuales.forEach(nodoVisual => {
+                if (nodoVisual && nodoVisual.destroy) {
+                    nodoVisual.destroy();
+                }
+            });
+        }
 
         this.aristasVisuales = [];
         this.nodosVisuales = [];
 
-        this.aristas.forEach(arista => {
+        /*
+            Día 5 tiene muchas relaciones.
+            Ocultamos los pesos base para no saturar la vista.
+            Los pesos aparecen cuando una arista se resalta.
+        */
+        this.mostrarPesosBase =
+            this.diaActual !== 5 &&
+            this.algoritmo !== 'MASTER';
 
-            const g =
-                this.add.graphics();
+        /*
+            Guardamos posiciones de textos para evitar que los pesos
+            se monten encima entre sí.
+        */
+        this._posicionesPesoUsadas = [];
+
+        const grosorBase =
+            this.diaActual === 5 || this.algoritmo === 'MASTER'
+                ? 1.4
+                : this.diaActual === 4
+                    ? 1.8
+                    : this.nodos.length >= 14
+                        ? 2
+                        : 3;
+
+        const alphaBase =
+            this.diaActual === 5 || this.algoritmo === 'MASTER'
+                ? 0.18
+                : this.diaActual === 4
+                    ? 0.28
+                    : 0.46;
+
+        this.aristas.forEach(arista => {
+            const g = this.add.graphics();
 
             g.setDepth(5);
             arista.graphics = g;
@@ -1351,27 +1754,28 @@ export class GrafoDia extends Phaser.Scene {
             this._dibujarArista(
                 arista,
                 0x9fc7ff,
-                this.nodos.length >= 14 ? 2 : 3,
-                0.46
+                grosorBase,
+                alphaBase
             );
 
-            const textoPeso =
-                this.add.text(
-                    0,
-                    0,
-                    `${arista.peso}`,
-                    {
-                        fontFamily: '"VT323", monospace',
-                        fontSize:
-                            this.nodos.length >= 14
-                                ? '14px'
+            const textoPeso = this.add.text(
+                0,
+                0,
+                `${arista.peso}`,
+                {
+                    fontFamily: '"VT323", monospace',
+                    fontSize:
+                        this.diaActual === 5 || this.algoritmo === 'MASTER'
+                            ? '12px'
+                            : this.nodos.length >= 14
+                                ? '13px'
                                 : '16px',
-                        color: '#fff2a8',
-                        stroke: '#071022',
-                        strokeThickness: 4,
-                        backgroundColor: '#041127'
-                    }
-                );
+                    color: '#fff2a8',
+                    stroke: '#071022',
+                    strokeThickness: 4,
+                    backgroundColor: '#041127'
+                }
+            );
 
             textoPeso.setOrigin(0.5);
             textoPeso.setDepth(30);
@@ -1379,14 +1783,14 @@ export class GrafoDia extends Phaser.Scene {
             arista.textoPeso = textoPeso;
             this._posicionarTextoPeso(arista);
 
-            this.aristasVisuales.push(g);
+            textoPeso.setVisible(this.mostrarPesosBase);
 
+            this.aristasVisuales.push(g);
         });
 
         this.nodos.forEach(nodo => {
             this._dibujarNodo(nodo);
         });
-
     }
 
     _dibujarArista(
@@ -1540,7 +1944,6 @@ export class GrafoDia extends Phaser.Scene {
     }
 
     _dibujarNodo(nodo) {
-
         const radio =
             this.radioNodo || 18;
 
@@ -1584,7 +1987,6 @@ export class GrafoDia extends Phaser.Scene {
         cont.add(halo);
 
         if (nodo.esVictima) {
-
             const nombreInterno =
                 this.add.text(
                     0,
@@ -1592,10 +1994,7 @@ export class GrafoDia extends Phaser.Scene {
                     'Valeria',
                     {
                         fontFamily: '"VT323", monospace',
-                        fontSize:
-                            radio <= 14
-                                ? '10px'
-                                : '12px',
+                        fontSize: radio <= 14 ? '9px' : '11px',
                         color: '#ffffff',
                         stroke: '#7b1430',
                         strokeThickness: 3,
@@ -1604,16 +2003,13 @@ export class GrafoDia extends Phaser.Scene {
                 ).setOrigin(0.5);
 
             cont.add(nombreInterno);
-
         }
 
         else {
-
             const key =
                 this._obtenerClaveAvatar(nodo.caso);
 
             if (this.textures.exists(key)) {
-
                 const avatar =
                     this.add.image(
                         0,
@@ -1628,11 +2024,9 @@ export class GrafoDia extends Phaser.Scene {
 
                 cont.add(avatar);
                 nodo.avatar = avatar;
-
             }
 
             else {
-
                 const avatar =
                     this.add.circle(
                         0,
@@ -1644,30 +2038,32 @@ export class GrafoDia extends Phaser.Scene {
 
                 cont.add(avatar);
                 nodo.avatar = avatar;
-
             }
+
+            const fontNombre =
+                this.diaActual === 4 || this.diaActual === 5 || this.algoritmo === 'MASTER'
+                    ? '9px'
+                    : this.nodos.length >= 14
+                        ? '10px'
+                        : '12px';
 
             const nombre =
                 this.add.text(
                     0,
-                    radio + 8,
+                    radio + 6,
                     nodo.nombre,
                     {
                         fontFamily: '"VT323", monospace',
-                        fontSize:
-                            this.nodos.length >= 14
-                                ? '10px'
-                                : '12px',
+                        fontSize: fontNombre,
                         color: '#ffffff',
                         stroke: '#071022',
                         strokeThickness: 3,
                         align: 'center',
-                        wordWrap: { width: 76 }
+                        wordWrap: { width: 70 }
                     }
                 ).setOrigin(0.5, 0);
 
             cont.add(nombre);
-
         }
 
         cont.setSize(
@@ -1706,31 +2102,46 @@ export class GrafoDia extends Phaser.Scene {
         nodo.halo = halo;
 
         this.nodosVisuales.push(cont);
-
     }
 
     _restaurarGrafo() {
+        const grosorBase =
+            this.diaActual === 5 || this.algoritmo === 'MASTER'
+                ? 1.4
+                : this.diaActual === 4
+                    ? 1.8
+                    : this.nodos.length >= 14
+                        ? 2
+                        : 3;
+
+        const alphaBase =
+            this.diaActual === 5 || this.algoritmo === 'MASTER'
+                ? 0.18
+                : this.diaActual === 4
+                    ? 0.28
+                    : 0.46;
+
+        this._posicionesPesoUsadas = [];
 
         this.aristas.forEach(a => {
-
             if (a.graphics) {
                 this._dibujarArista(
                     a,
                     0x9fc7ff,
-                    this.nodos.length >= 14 ? 2 : 3,
-                    0.46
+                    grosorBase,
+                    alphaBase
                 );
             }
 
             if (a.textoPeso) {
                 a.textoPeso.setColor('#fff2a8');
+                a.textoPeso.setDepth(30);
+                a.textoPeso.setVisible(this.mostrarPesosBase);
                 this._posicionarTextoPeso(a);
             }
-
         });
 
         this.nodos.forEach(nodo => {
-
             if (!nodo.halo) return;
 
             const colorBase =
@@ -1753,11 +2164,8 @@ export class GrafoDia extends Phaser.Scene {
             if (nodo.container) {
                 nodo.container.setScale(1);
             }
-
         });
-
     }
-
     _resaltarNodo(idNodo, colorRelleno, colorBorde) {
 
         const nodo =
@@ -1779,24 +2187,19 @@ export class GrafoDia extends Phaser.Scene {
     }
 
     _resaltarArista(idA, idB, color, grosor = 5) {
-
         this.aristas.forEach(a => {
-
             const coincide =
                 (
-                    a.from === idA
-                    &&
+                    a.from === idA &&
                     a.to === idB
                 )
                 ||
                 (
-                    a.from === idB
-                    &&
+                    a.from === idB &&
                     a.to === idA
                 );
 
             if (coincide) {
-
                 this._dibujarArista(
                     a,
                     color,
@@ -1805,14 +2208,22 @@ export class GrafoDia extends Phaser.Scene {
                 );
 
                 if (a.textoPeso) {
+                    const valorTexto =
+                        this.algoritmo === 'FORD'
+                            ? `${a.capacidad}`
+                            : `${a.peso}`;
+
+                    a.textoPeso.setText(valorTexto);
+                    a.textoPeso.setVisible(true);
+                    a.textoPeso.setAlpha(1);
                     a.textoPeso.setColor('#ffffff');
+                    a.textoPeso.setBackgroundColor('#071022');
+                    a.textoPeso.setDepth(95);
+
                     this._posicionarTextoPeso(a);
                 }
-
             }
-
         });
-
     }
 
     // =========================================================
@@ -1886,7 +2297,7 @@ export class GrafoDia extends Phaser.Scene {
         );
 
         this._crearBotonRecorrido(
-            185,
+            155,
             112,
             'VER BFS',
             0x2f8f46,
@@ -1896,7 +2307,7 @@ export class GrafoDia extends Phaser.Scene {
         );
 
         this._crearBotonRecorrido(
-            350,
+            320,
             112,
             'VER DFS',
             0xff7b39,
@@ -2063,6 +2474,21 @@ export class GrafoDia extends Phaser.Scene {
 
     }
 
+    _ordenarVecinosDFS(vecinos) {
+        return [...vecinos].sort((a, b) => {
+            const nodoA = this.nodos.find(n => n.id === a);
+            const nodoB = this.nodos.find(n => n.id === b);
+
+            if (!nodoA || !nodoB) return 0;
+
+            if (nodoA.x !== nodoB.x) {
+                return nodoB.x - nodoA.x;
+            }
+
+            return nodoB.y - nodoA.y;
+        });
+    }
+
     obtenerOrdenBFS() {
 
         const origen =
@@ -2108,7 +2534,7 @@ export class GrafoDia extends Phaser.Scene {
             });
 
             vecinos =
-                this._ordenarVecinosPorPosicion(vecinos);
+                this._ordenarVecinosDFS(vecinos);
 
             vecinos.forEach(vecino => {
 
@@ -2339,7 +2765,7 @@ export class GrafoDia extends Phaser.Scene {
                     }
 
                     this.txtBFS.setText(
-                        `Recorrido BFS:\n`
+                        `BFS por niveles:\n`
                         + this._partirRutaPorCantidad(nombres, 3)
                     );
 
@@ -2360,12 +2786,11 @@ export class GrafoDia extends Phaser.Scene {
                     ordenBFS.map(paso => this._nombrePorId(paso.id));
 
                 this.txtBFS.setText(
-                    `Recorrido BFS:\n`
+                    `BFS por niveles:\n`
                     + `${this._partirRutaPorCantidad(ruta, 3)}\n\n`
                     + `Ayuda al caso:\n`
-                    + `Permite ver quiénes están más cerca del inicio del ataque.`
+                    + `Primero revisa los sospechosos más cercanos al inicio.`
                 );
-
                 this.txtEstadisticas.setText(
                     `BFS listo\n`
                     + `Personas: ${this.nodos.length}\n`
@@ -2691,10 +3116,10 @@ export class GrafoDia extends Phaser.Scene {
                 );
 
                 this.txtAyuda.setText(
-                'Dijkstra ayudó al detective a\n' +
-                'encontrar la ruta más rápida para\n' +
-                'analizar los hechos y llegar\n' +
-                'directamente hasta Valeria.'
+                    'Dijkstra ayudó al detective a\n' +
+                    'encontrar la ruta más rápida para\n' +
+                    'analizar los hechos y llegar\n' +
+                    'directamente hasta Valeria.'
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -2859,7 +3284,7 @@ export class GrafoDia extends Phaser.Scene {
                     'Prim permitió al detective ver\n' +
                     'la red mínima del caso, revelando\n' +
                     'las conexiones clave que unen\n' +
-                    'a todos los implicados con Valeria.'           
+                    'a todos los implicados con Valeria.'
                 );
 
                 this.txtEstadoDinamico.setText(
@@ -3162,6 +3587,17 @@ export class GrafoDia extends Phaser.Scene {
 
         this.ultimateCulpable =
             principal || this.obtenerNodoOrigen();
+        this.cabecillaCorrecto = this.ultimateCulpable
+            ? {
+                nombre: this.ultimateCulpable.nombre,
+                id: this.ultimateCulpable.id
+            }
+            : null;
+
+        this.siguienteEstado = {
+            ...(this.siguienteEstado || {}),
+            cabecillaCorrecto: this.cabecillaCorrecto
+        };
 
         if (this.ultimateCulpable) {
 
@@ -3567,13 +4003,19 @@ export class GrafoDia extends Phaser.Scene {
                 420,
                 () => {
 
-                    this.scene.start(
-                        'Ventana1',
-                        {
-                            ...this.siguienteEstado,
-                            diaActual: this.diaActual + 1
-                        }
-                    );
+                    const estadoSiguiente = {
+                        ...(this.siguienteEstado || {}),
+                        diaActual: this.diaActual + 1
+                    };
+
+                    if (this.algoritmo === 'MASTER' && this.ultimateCulpable) {
+                        estadoSiguiente.cabecillaCorrecto = {
+                            nombre: this.ultimateCulpable.nombre,
+                            id: this.ultimateCulpable.id
+                        };
+                    }
+
+                    this.scene.start('Ventana1', estadoSiguiente);
 
                 }
             );

@@ -4,120 +4,120 @@ export const Sanciones = {
     1: [
         new ContenidoSancion(
             'Injuria',
-            'Qué significa: ocurre cuando una persona insulta, humilla o ataca la dignidad de Valeria con palabras ofensivas. No le inventa un delito, solo busca hacerla sentir menos o dañar su honra.',
-            'Sanción guía: multa, retractación y corrección pública del daño causado. Si el insulto se difunde por redes, la sanción puede ser más fuerte.',
-            'Ejemplo fácil: decirle a Valeria “das pena”, “nadie te quiere” o “eres lo peor” para humillarla públicamente.',
-            'Art. 220 del Código Penal Colombiano — Injuria: imputaciones deshonrosas contra otra persona.'
+            'Insultos o humillaciones que dañan la dignidad de Valeria.',
+            'Multa, retractación y corrección pública.',
+            'Ejemplo: decirle “das pena” para humillarla.',
+            'Art. 220 Código Penal Colombiano — Injuria.'
         ),
         new ContenidoSancion(
             'Acoso reiterado',
-            'Qué significa: ocurre cuando una persona molesta, persigue o incomoda a Valeria varias veces. La clave no es solo lo que dice, sino que lo repite muchas veces hasta afectar su tranquilidad.',
-            'Sanción guía: orden de cese, bloqueo, medida de protección y sanción disciplinaria o judicial si se demuestra afectación psicológica.',
-            'Ejemplo fácil: comentar cosas ofensivas cada vez que Valeria publica algo, durante varios días, para hacerla sentir perseguida.',
-            'Ley 1620 de 2013 — Convivencia Escolar: reconoce el ciberacoso como daño psicológico por medios electrónicos.'
+            'Molestias repetidas que afectan la tranquilidad de Valeria.',
+            'Orden de cese, bloqueo y medida de protección.',
+            'Ejemplo: insultarla cada vez que publica algo.',
+            'Ley 1620 de 2013 — Ciberacoso.'
         ),
         new ContenidoSancion(
             'Perturbación a la tranquilidad',
-            'Qué significa: ocurre cuando alguien altera la paz de Valeria con burlas, reacciones o molestias repetidas. Puede parecer menos grave que una amenaza, pero igual interrumpe su tranquilidad.',
-            'Sanción guía: llamado de atención, orden de cese, multa menor o medida para impedir que la molestia continúe.',
-            'Ejemplo fácil: reaccionar con burlas a muchas publicaciones de Valeria sin escribir una amenaza directa.',
-            'Protección general a la tranquilidad, honra y vida cotidiana de la víctima frente a interferencias injustificadas.'
+            'Burlas o molestias constantes que alteran su paz digital.',
+            'Llamado de atención, orden de cese o multa menor.',
+            'Ejemplo: reaccionar con burlas en muchas publicaciones.',
+            'Protección a la honra y tranquilidad de la víctima.'
         )
     ],
 
     2: [
         new ContenidoSancion(
             'Injuria agravada por medios digitales',
-            'Qué significa: es un insulto o ataque contra la honra de Valeria, pero se vuelve más grave porque se publica en redes, grupos o plataformas donde muchas personas pueden verlo.',
-            'Sanción guía: multa, retractación pública y aumento de la sanción por la difusión masiva del daño.',
-            'Ejemplo fácil: publicar algo ofensivo sobre Valeria y pedir que todos lo compartan para humillarla.',
-            'Art. 220 del Código Penal Colombiano, con agravación por difusión mediante medios digitales o masivos.'
+            'Insulto difundido en redes o grupos, aumentando el daño.',
+            'Multa, retractación pública y sanción agravada.',
+            'Ejemplo: publicar una burla y pedir que todos la compartan.',
+            'Art. 220 Código Penal, agravado por difusión digital.'
         ),
         new ContenidoSancion(
             'Hostigamiento digital',
-            'Qué significa: ocurre cuando varias acciones digitales buscan cansar, presionar, humillar o aislar a Valeria. La clave es que el ataque ocurre en internet y puede involucrar a varias personas.',
-            'Sanción guía: orden de cese, restricciones digitales, sanción disciplinaria y posibles consecuencias penales si hay daño grave.',
-            'Ejemplo fácil: pedirle a un grupo que comente contra Valeria hasta que borre su cuenta o deje de participar en redes.',
-            'Ley 1620 de 2013 y normas de convivencia escolar sobre ciberacoso y protección de la víctima.'
+            'Presión o ataque en redes para cansar, aislar o humillar.',
+            'Orden de cese, restricciones digitales y sanción disciplinaria.',
+            'Ejemplo: pedir a un grupo que ataque su cuenta.',
+            'Ley 1620 de 2013 — Ciberacoso.'
         ),
         new ContenidoSancion(
             'Perturbación a la tranquilidad agravada',
-            'Qué significa: ocurre cuando una molestia o burla repetida se vuelve más grave porque otras personas ayudan a expandirla. No siempre hay amenaza, pero sí hay daño aumentado por la difusión.',
-            'Sanción guía: multa mayor, orden de cese y responsabilidad individual para quienes participaron en la perturbación coordinada.',
-            'Ejemplo fácil: compartir una burla en varios grupos para que más personas se rían de Valeria.',
-            'La agravación aparece cuando la perturbación se ejecuta de forma coordinada o con mayor alcance.'
+            'Molestia repetida que se agrava porque otros la difunden.',
+            'Multa mayor, orden de cese y responsabilidad individual.',
+            'Ejemplo: compartir una burla en varios grupos.',
+            'Agravación por difusión o participación coordinada.'
         )
     ],
 
     3: [
         new ContenidoSancion(
             'Calumnia',
-            'Qué significa: ocurre cuando alguien acusa falsamente a Valeria de haber cometido un delito o una falta grave concreta. La clave es que la acusación es específica y dañina.',
-            'Sanción guía: retractación pública, multa y posible prisión si se demuestra la imputación falsa.',
-            'Ejemplo fácil: decir que Valeria robó exámenes cuando no hay prueba y la acusación es falsa.',
-            'Art. 221 del Código Penal Colombiano — Calumnia: imputar falsamente una conducta típica a otra persona.'
+            'Acusar falsamente a Valeria de un hecho grave o delito.',
+            'Retractación, multa y posible sanción penal.',
+            'Ejemplo: decir que robó exámenes sin pruebas.',
+            'Art. 221 Código Penal Colombiano — Calumnia.'
         ),
         new ContenidoSancion(
             'Difamación digital',
-            'Qué significa: ocurre cuando se comparte información falsa, editada, manipulada o sacada de contexto para dañar la imagen de Valeria en medios digitales.',
-            'Sanción guía: eliminar el contenido, retractarse públicamente y responder por el daño causado a la imagen de la víctima.',
-            'Ejemplo fácil: compartir una captura editada para hacer creer que Valeria dijo o hizo algo que nunca ocurrió.',
-            'Protección del buen nombre y responsabilidad por difusión de información falsa en entornos digitales.'
+            'Compartir información falsa o manipulada para dañar su imagen.',
+            'Eliminar contenido, retractarse y reparar el daño.',
+            'Ejemplo: reenviar una captura editada.',
+            'Protección del buen nombre en medios digitales.'
         ),
         new ContenidoSancion(
             'Daño a la reputación por información falsa',
-            'Qué significa: ocurre cuando se difunden rumores o comentarios falsos que dañan el buen nombre de Valeria, aunque no necesariamente la acusen de un delito concreto.',
-            'Sanción guía: retractación, eliminación del contenido, reparación del daño e indemnización según la gravedad.',
-            'Ejemplo fácil: decir en grupos que Valeria engaña a todos o que es mala persona, sin pruebas.',
-            'Art. 15 de la Constitución Política de Colombia — derecho a la intimidad y al buen nombre.'
+            'Difundir rumores que dañan el buen nombre de Valeria.',
+            'Retractación, eliminación del contenido y reparación.',
+            'Ejemplo: decir que Valeria engaña a todos sin pruebas.',
+            'Art. 15 Constitución Política — Buen nombre.'
         )
     ],
 
     4: [
         new ContenidoSancion(
             'Suplantación de identidad digital',
-            'Qué significa: ocurre cuando alguien usa el nombre, foto o identidad de Valeria para hacerse pasar por ella en internet. La clave es que crea una apariencia falsa de que es Valeria.',
-            'Sanción guía: eliminación del perfil falso, reparación del daño y sanción penal o disciplinaria según la gravedad.',
-            'Ejemplo fácil: crear una cuenta falsa con fotos reales de Valeria y publicar mensajes como si ella los hubiera escrito.',
-            'Ley 1273 de 2009 — protección de datos e identidad en entornos informáticos.'
+            'Usar nombre, foto o identidad de Valeria para hacerse pasar por ella.',
+            'Eliminar perfil falso y reparar el daño.',
+            'Ejemplo: crear una cuenta falsa con sus fotos.',
+            'Ley 1273 de 2009 — Protección de identidad digital.'
         ),
         new ContenidoSancion(
             'Delito informático por acceso no autorizado',
-            'Qué significa: ocurre cuando alguien entra sin permiso a una cuenta, correo, celular, computador o plataforma de Valeria. La clave es que se usa una cuenta real sin autorización.',
-            'Sanción guía: prisión y multa si se demuestra el acceso abusivo a un sistema informático.',
-            'Ejemplo fácil: entrar a la cuenta real de Valeria y publicar mensajes desde su propio perfil.',
-            'Ley 1273 de 2009 — Art. 269A: acceso abusivo a un sistema informático.'
+            'Entrar sin permiso a una cuenta o plataforma de Valeria.',
+            'Prisión y multa si se demuestra el acceso abusivo.',
+            'Ejemplo: publicar desde la cuenta real de Valeria.',
+            'Ley 1273 de 2009 — Art. 269A.'
         ),
         new ContenidoSancion(
             'Uso indebido de datos personales',
-            'Qué significa: ocurre cuando alguien guarda, publica, envía o comparte datos privados de Valeria sin permiso, como fotos, número, ubicación, usuario o información personal.',
-            'Sanción guía: multa, eliminación de los datos, sanción administrativa y posible proceso penal si el daño es grave.',
-            'Ejemplo fácil: reenviar fotos privadas, número de teléfono o ubicación de Valeria en grupos sin autorización.',
-            'Ley 1581 de 2012 — protección de datos personales y habeas data.'
+            'Compartir fotos, número, ubicación o datos privados sin permiso.',
+            'Eliminar datos, multa y posible sanción penal.',
+            'Ejemplo: reenviar fotos o número de Valeria.',
+            'Ley 1581 de 2012 — Protección de datos personales.'
         )
     ],
 
     5: [
         new ContenidoSancion(
             'Acoso y hostigamiento digital coordinado',
-            'Qué significa: ocurre cuando una persona dirige o coordina a varias cuentas para atacar a Valeria al mismo tiempo. La clave es que hay liderazgo del ataque digital.',
-            'Sanción guía: sanción más fuerte para quien organiza y responsabilidad para quienes participan activamente.',
-            'Ejemplo fácil: dar una hora exacta para que todos comenten, etiqueten y presionen a Valeria en redes.',
-            'Ley 1620 de 2013 y reglas sobre responsabilidad por acciones coordinadas de ciberacoso.'
+            'Organizar a varias personas para atacar a Valeria en redes.',
+            'Sanción mayor para organizadores y participantes.',
+            'Ejemplo: fijar una hora para que todos la ataquen.',
+            'Ley 1620 de 2013 — Ciberacoso coordinado.'
         ),
         new ContenidoSancion(
             'Amenazas graves por medios digitales',
-            'Qué significa: ocurre cuando alguien envía un mensaje para asustar a Valeria anunciando que le puede pasar algo malo a ella o a alguien cercano.',
-            'Sanción guía: prisión, medidas de protección y agravación si la amenaza es repetida o se realiza desde cuentas anónimas.',
-            'Ejemplo fácil: escribir “si hablas, te va a ir muy mal” o “después no digas que no te avisamos”.',
-            'Art. 347 del Código Penal Colombiano — amenazas.'
+            'Mensajes que buscan asustar a Valeria anunciando un posible daño.',
+            'Prisión y medidas de protección.',
+            'Ejemplo: “si hablas, te va a ir muy mal”.',
+            'Art. 347 Código Penal Colombiano — Amenazas.'
         ),
         new ContenidoSancion(
             'Asociación para cometer ciberacoso',
-            'Qué significa: ocurre cuando varias personas se organizan en un grupo con tareas, horarios o roles para acosar a Valeria. La clave es la planificación entre varios.',
-            'Sanción guía: sanción para organizadores e integrantes activos, según su participación dentro del grupo.',
-            'Ejemplo fácil: crear un chat donde se decide quién comenta, quién comparte, a qué hora atacan y qué mensaje debe usar cada persona.',
-            'Art. 340 del Código Penal Colombiano — concierto para delinquir, usado aquí como referencia narrativa para organización del ataque.'
+            'Grupo organizado con roles, horarios o tareas para acosar.',
+            'Sanción según participación dentro del grupo.',
+            'Ejemplo: decidir quién comenta, comparte y presiona.',
+            'Art. 340 Código Penal — Referencia narrativa de organización.'
         )
     ]
 };
